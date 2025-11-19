@@ -1,4 +1,4 @@
-import { classMixin, mergeData, findNextGreater, findNextLesser, isEven, findArrayNumberByUniqueID, trace } from "../core/Util"
+_getTimeScaleimport { classMixin, mergeData, findNextGreater, findNextLesser, isEven, findArrayNumberByUniqueID, trace } from "../core/Util"
 import Events from "../core/Events"
 import { DOMMixins } from "../dom/DOMMixins"
 import { DOMEvent } from "../dom/DOMEvent"
@@ -151,7 +151,7 @@ export class TimeNav {
         }
         if (height && height != this.options.height) {
             this.options.height = height;
-            this.timescale = this._getTimeScale();
+            this.timescale = this.();
         }
 
         // Size Markers
@@ -202,6 +202,35 @@ export class TimeNav {
         });
     }
 
+    _calculateMaxLevelsPerGroup() {
+    var group_levels = {};
+    var group_labels = this.timescale.getGroupLabels();
+    
+    // Initialize groups
+    for (var i = 0; i < group_labels.length; i++) {
+        group_levels[group_labels[i].label] = 0;
+    }
+    
+    // Find maximum level in each group
+    for (var i = 0; i < this._markers.length; i++) {
+        var marker = this._markers[i];
+        var group = marker.data.group || '';
+        var level = marker.data.level || 0;
+        
+        if (group_levels[group] !== undefined && level > group_levels[group]) {
+            group_levels[group] = level;
+        }
+    }
+    
+    // Convert to array in same order as group_labels
+    var result = [];
+    for (var i = 0; i < group_labels.length; i++) {
+        result.push(group_levels[group_labels[i].label] + 1); // +1 because levels are 0-based
+    }
+    
+    return result;
+}
+    
     _updateTimeScale(new_scale) {
         this.options.scale_factor = new_scale;
         this._updateDrawTimeline();
@@ -728,35 +757,6 @@ export class TimeNav {
             this._positionEras(fast);
         }
     }
-   
-    _calculateMaxLevelsPerGroup() {
-    var group_levels = {};
-    var group_labels = this.timescale.getGroupLabels();
-    
-    // Initialize groups
-    for (var i = 0; i < group_labels.length; i++) {
-        group_levels[group_labels[i].label] = 0;
-    }
-    
-    // Find maximum level in each group
-    for (var i = 0; i < this._markers.length; i++) {
-        var marker = this._markers[i];
-        var group = marker.data.group || '';
-        var level = marker.data.level || 0;
-        
-        if (group_levels[group] !== undefined && level > group_levels[group]) {
-            group_levels[group] = level;
-        }
-    }
-    
-    // Convert to array in same order as group_labels
-    var result = [];
-    for (var i = 0; i < group_labels.length; i++) {
-        result.push(group_levels[group_labels[i].label] + 1); // +1 because levels are 0-based
-    }
-    
-    return result;
-}
     
     _updateDrawTimeline(check_update) {
         var do_update = false;
