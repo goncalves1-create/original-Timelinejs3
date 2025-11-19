@@ -52,7 +52,7 @@
         "disttest": "npm run dist && http-server dist -o '/embed/index.html?debug=true&language=es&script_path='",
         "compare": "npm run dist && http-server dist -o '/embed/compare.html'",
         "clean": "trash dist",
-        "build": "webpack --config webpack.prod.js && node tasks/compile_less.js",
+        "build": "webpack --config webpack.prod.js --mode development && node tasks/compile_less.js",
         "start": "npx webpack serve --open --config webpack.dev.js",
         "stage": "npm run dist && node tasks/stage.js",
         "stage_latest": "npm run dist && node tasks/stage.js latest",
