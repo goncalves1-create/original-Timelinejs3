@@ -226,22 +226,19 @@ export class TimeMarker {
 	}
 
 	setRowPosition(n, remainder) {
-    // Get the level from the data if it exists
+    // Get level from data or default to 0
     var level = this.data.level || 0;
+    var levelSpacing = 120; // Horizontal spacing between levels
     
-    // Calculate horizontal offset based on level
-    var levelSpacing = 120; // Adjust this value as needed
-    var levelOffset = level * levelSpacing;
-    
-    // Set both vertical (row) and horizontal (level) positioning
+    // Set both vertical (row) and horizontal (level) position
     this.setPosition({ 
         top: n,
-        left: levelOffset 
+        left: level * levelSpacing  // <-- ADD THIS FOR LEVEL POSITIONING
     });
     
     this._el.timespan.style.height = remainder + "px";
     
-    // Add a CSS class for level-based styling
+    // Optional: Add level attribute for CSS styling
     this._el.container.setAttribute('data-level', level);
 }
 
