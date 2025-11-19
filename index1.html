@@ -14,16 +14,52 @@
 
     <script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script>
     <script type="text/javascript">
-timeline = new TL.Timeline('timeline-embed',
-    'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/e/2PACX-1vRrTFku6iNKaM_OenaASfDDwzqwxilUS-Nomtk4PcU_E3F3BExfFGVByb3EGWkVt__JUYRsBiS1oZwN/pubhtml',
-    {
+// Load data from proxy
+function loadTimelineFromProxy() {
+    const proxyUrl = 'https://goncalves1-create.github.io/original-Timelinejs3/proxy.html';
+    
+    // Create iframe to load proxy
+    const iframe = document.createElement('iframe');
+    iframe.src = proxyUrl;
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    
+    // Listen for data from proxy
+    window.addEventListener('message', function(event) {
+        if (event.data.type === 'sheetsData') {
+            // Process the data and create timeline
+            processSheetsData(event.data.data);
+        }
+    });
+}
+
+function processSheetsData(htmlData) {
+    // You'll need to parse the HTML and convert to TimelineJS format
+    // This is a simplified version - you might need more complex parsing
+    console.log('Received data:', htmlData);
+    
+    // For now, let's create a simple test timeline
+    const testData = {
+        events: [
+            {
+                start_date: { year: "2020", month: "1" },
+                text: { headline: "Data loaded via proxy", text: "CORS issue solved!" },
+                level: 1
+            }
+        ]
+    };
+    
+    timeline = new TL.Timeline('timeline-embed', testData, {
         language: "pt",
         start_at_end: false,
         zoom_level: 0,
         timenav_height: 100,
         scale_factor: 1
-    }
-);
+    });
+}
+
+// Start loading
+loadTimelineFromProxy();
     </script>
 </body>
 </html>
