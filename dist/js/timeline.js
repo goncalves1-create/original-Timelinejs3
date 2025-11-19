@@ -2007,6 +2007,11 @@ function extractEventFromCSVObject(orig_row) {
         type: row['Type'] || ''
     }
 
+    // ADD LEVEL SUPPORT HERE
+    if (row['Level']) {
+        d.level = parseInt(row['Level']);
+    }
+    
     if (Object.keys(row).includes('Start Date') || Object.keys(row).includes('End Date')) {
         // V1 date handling
         if (row['Start Date']) {
