@@ -4208,12 +4208,14 @@ const SCALE_DATE_CLASSES = {
 
 "use strict";
 /* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   BIG_DATE_SCALES: () => (/* binding */ BIG_DATE_SCALES),
 /* harmony export */   BigDate: () => (/* binding */ BigDate),
 /* harmony export */   BigYear: () => (/* binding */ BigYear),
+/* harmony export */   SCALES: () => (/* binding */ SCALES),
 /* harmony export */   TLDate: () => (/* binding */ TLDate),
 /* harmony export */   parseDate: () => (/* binding */ parseDate)
 /* harmony export */ });
-/* unused harmony exports SCALES, makeDate, BIG_DATE_SCALES */
+/* unused harmony export makeDate */
 /* harmony import */ var _core_TLClass__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../core/TLClass */ "./src/js/core/TLClass.js");
 /* harmony import */ var _language_Language__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../language/Language */ "./src/js/language/Language.js");
 /* harmony import */ var _core_TLError__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/TLError */ "./src/js/core/TLError.js");
@@ -12593,6 +12595,122 @@ async function exportJSON(url, proxy_url) {
 
 /***/ }),
 
+/***/ "./src/js/timenav/AxisHelper.js":
+/*!**************************************!*\
+  !*** ./src/js/timenav/AxisHelper.js ***!
+  \**************************************/
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+
+"use strict";
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getBestHelper: () => (/* binding */ getBestHelper)
+/* harmony export */ });
+/* harmony import */ var _date_TLDate__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../date/TLDate */ "./src/js/date/TLDate.js");
+/* harmony import */ var _core_TLError__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/TLError */ "./src/js/core/TLError.js");
+
+
+
+/*  AxisHelper
+    Strategies for laying out the timenav
+    markers and time axis
+    Intended as a private class -- probably only known to TimeScale
+    Get them using the exported getBestHelper function
+================================================== */
+class AxisHelper {
+    constructor(options) {
+		if (options) {
+            this.scale = options.scale;
+	        this.minor = options.minor;
+	        this.major = options.major;
+		} else {
+            throw new _core_TLError__WEBPACK_IMPORTED_MODULE_1__["default"]("axis_helper_no_options_err")
+        }
+       
+    }
+    
+    getPixelsPerTick(pixels_per_milli) {
+        return pixels_per_milli * this.minor.factor;
+    }
+
+    getMajorTicks(timescale) {
+		return this._getTicks(timescale, this.major)
+    }
+
+    getMinorTicks(timescale) {
+        return this._getTicks(timescale, this.minor)
+    }
+
+    _getTicks(timescale, option) {
+
+        var factor_scale = timescale._scaled_padding * option.factor;
+        var first_tick_time = timescale._earliest - factor_scale;
+        var last_tick_time = timescale._latest + factor_scale;
+        var ticks = []
+        for (var i = first_tick_time; i < last_tick_time; i += option.factor) {
+            ticks.push(timescale.getDateFromTime(i).floor(option.name));
+        }
+
+        return {
+            name: option.name,
+            ticks: ticks
+        }
+
+    }
+
+}
+var HELPERS = {};
+
+var setHelpers = function(scale_type, scales) {
+    HELPERS[scale_type] = [];
+    
+    for (var idx = 0; idx < scales.length - 1; idx++) {
+        var minor = scales[idx];
+        var major = scales[idx+1];
+        HELPERS[scale_type].push(new AxisHelper({
+            scale: minor[3],
+            minor: { name: minor[0], factor: minor[1]},
+            major: { name: major[0], factor: major[1]}
+        }));
+    }
+};
+
+setHelpers('human', _date_TLDate__WEBPACK_IMPORTED_MODULE_0__.SCALES);
+setHelpers('cosmological', _date_TLDate__WEBPACK_IMPORTED_MODULE_0__.BIG_DATE_SCALES);
+
+
+function getBestHelper(ts,optimal_tick_width) {
+    if (typeof(optimal_tick_width) != 'number' ) {
+        optimal_tick_width = 100;
+    }
+    var ts_scale = ts.getScale();
+    var helpers = HELPERS[ts_scale];
+    
+    if (!helpers) {
+        throw new _core_TLError__WEBPACK_IMPORTED_MODULE_1__["default"]("axis_helper_scale_err", ts_scale);
+    }
+    
+    var prev = null;
+    for (var idx = 0; idx < helpers.length; idx++) {
+        var curr = helpers[idx];
+        var pixels_per_tick = curr.getPixelsPerTick(ts._pixels_per_milli);
+        if (pixels_per_tick > optimal_tick_width)  {
+            if (prev == null) return curr;
+            var curr_dist = Math.abs(optimal_tick_width - pixels_per_tick);
+            var prev_dist = Math.abs(optimal_tick_width - pixels_per_tick);
+            if (curr_dist < prev_dist) {
+                return curr;
+            } else {
+                return prev;
+            }
+        }
+        prev = curr;
+    }
+    return helpers[helpers.length - 1]; // last resort           
+}
+
+
+/***/ }),
+
 /***/ "./src/js/timenav/TimeAxis.js":
 /*!************************************!*\
   !*** ./src/js/timenav/TimeAxis.js ***!
@@ -13642,7 +13760,6 @@ class TimeMarker {
 /* harmony import */ var _dom_DOM__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../dom/DOM */ "./src/js/dom/DOM.js");
 /* harmony import */ var _animation_Ease__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../animation/Ease */ "./src/js/animation/Ease.js");
 /* harmony import */ var _TimeScale__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./TimeScale */ "./src/js/timenav/TimeScale.js");
-/* harmony import */ var _TimeScale__WEBPACK_IMPORTED_MODULE_6___default = /*#__PURE__*/__webpack_require__.n(_TimeScale__WEBPACK_IMPORTED_MODULE_6__);
 /* harmony import */ var _TimeGroup__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./TimeGroup */ "./src/js/timenav/TimeGroup.js");
 /* harmony import */ var _TimeEra__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./TimeEra */ "./src/js/timenav/TimeEra.js");
 /* harmony import */ var _TimeAxis__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./TimeAxis */ "./src/js/timenav/TimeAxis.js");
@@ -14475,9 +14592,401 @@ class TimeNav {
 /*!*************************************!*\
   !*** ./src/js/timenav/TimeScale.js ***!
   \*************************************/
-/***/ (() => {
+/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-throw new Error("Module parse failed: Unexpected token (404:54)\nYou may need an appropriate loader to handle this file type, currently no loaders are configured to process this file. See https://webpack.js.org/concepts#loaders\n|          // ADD THIS HELPER FUNCTION RIGHT HERE:\n|     \n>         _findSlideIndexByStartDate(start_date_millis) {\n|         for (var i = 0; i < this._slides.length; i++) {\n|             if (this._slides[i].start_date.getTime() === start_date_millis) {");
+"use strict";
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   TimeScale: () => (/* binding */ TimeScale)
+/* harmony export */ });
+/* harmony import */ var _core_Util__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../core/Util */ "./src/js/core/Util.js");
+/* harmony import */ var _core_TLError__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/TLError */ "./src/js/core/TLError.js");
+/* harmony import */ var _date_TLDate__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../date/TLDate */ "./src/js/date/TLDate.js");
+/* harmony import */ var _AxisHelper__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./AxisHelper */ "./src/js/timenav/AxisHelper.js");
+
+
+
+
+
+
+// Date Format Lookup, map TLDate.SCALES names to...
+const AXIS_TICK_DATEFORMAT_LOOKUP = {
+    millisecond: 'time_milliseconds', // ...Language.<code>.dateformats
+    second: 'time_short',
+    minute: 'time_no_seconds_short',
+    hour: 'time_no_minutes_short',
+    day: 'full_short',
+    month: 'month_short',
+    year: 'year',
+    decade: 'year',
+    century: 'year',
+    millennium: 'year',
+    age: 'compact', // ...Language.<code>.bigdateformats
+    epoch: 'compact',
+    era: 'compact',
+    eon: 'compact',
+    eon2: 'compact'
+}
+
+class TimeScale {
+
+    constructor(timeline_config, options) {
+
+        var slides = timeline_config.events;
+        this._scale = timeline_config.scale;
+        this._slides = slides; // STORE SLIDES REFERENCE FOR LEVEL ACCESS
+        
+        options = (0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.mergeData)({ // establish defaults
+            display_width: 500,
+            screen_multiplier: 3,
+            max_rows: null
+        }, options);
+
+        this._display_width = options.display_width;
+        this._screen_multiplier = options.screen_multiplier;
+        this._pixel_width = this._screen_multiplier * this._display_width;
+
+        this._group_labels = undefined;
+        this._positions = []; // INITIALIZE POSITIONS ARRAY
+        this._pixels_per_milli = 0;
+
+        this._earliest = timeline_config.getEarliestDate().getTime();
+        this._latest = timeline_config.getLatestDate().getTime();
+        this._span_in_millis = this._latest - this._earliest;
+        if (this._span_in_millis <= 0) {
+            this._span_in_millis = this._computeDefaultSpan(timeline_config);
+        }
+        this._average = (this._span_in_millis) / slides.length;
+
+        this._pixels_per_milli = this.getPixelWidth() / this._span_in_millis;
+
+        this._axis_helper = (0,_AxisHelper__WEBPACK_IMPORTED_MODULE_3__.getBestHelper)(this);
+
+        this._scaled_padding = (1 / this.getPixelsPerTick()) * (this._display_width / 2)
+        this._computePositionInfo(slides, options.max_rows);
+    }
+
+    _computeDefaultSpan(timeline_config) {
+        // this gets called when all events are at the same instant,
+        // or maybe when the span_in_millis is > 0 but still below a desired threshold
+        if (timeline_config.scale == 'human') {
+            var formats = {}
+            for (var i = 0; i < timeline_config.events.length; i++) {
+                var fmt = timeline_config.events[i].start_date.findBestFormat();
+                formats[fmt] = (formats[fmt]) ? formats[fmt] + 1 : 1;
+            };
+
+            for (var i = _date_TLDate__WEBPACK_IMPORTED_MODULE_2__.SCALES.length - 1; i >= 0; i--) {
+                if (formats.hasOwnProperty(_date_TLDate__WEBPACK_IMPORTED_MODULE_2__.SCALES[i][0])) {
+                    var scale = _date_TLDate__WEBPACK_IMPORTED_MODULE_2__.SCALES[_date_TLDate__WEBPACK_IMPORTED_MODULE_2__.SCALES.length - 1]; // default
+                    if (_date_TLDate__WEBPACK_IMPORTED_MODULE_2__.SCALES[i + 1]) {
+                        scale = _date_TLDate__WEBPACK_IMPORTED_MODULE_2__.SCALES[i + 1]; // one larger than the largest in our data
+                    }
+                    return scale[1]
+                }
+            };
+            return 365 * 24 * 60 * 60 * 1000; // default to a year?
+        }
+
+        return 200000; // what is the right handling for cosmo dates?
+    }
+    
+    getGroupLabels() {
+        return (this._group_labels || []);
+    }
+
+    getScale() {
+        return this._scale;
+    }
+
+    getNumberOfRows() {
+        return this._number_of_rows
+    }
+
+    getPixelWidth() {
+        return this._pixel_width;
+    }
+
+    getPosition(time_in_millis) {
+        return (time_in_millis - this._earliest) * this._pixels_per_milli
+    }
+
+    getPositionInfo(idx) {
+        return this._positions[idx];
+    }
+
+    getPixelsPerTick() {
+        return this._axis_helper.getPixelsPerTick(this._pixels_per_milli);
+    }
+
+    getTicks() {
+        return {
+            major: this._axis_helper.getMajorTicks(this),
+            minor: this._axis_helper.getMinorTicks(this)
+        }
+    }
+
+    getDateFromTime(t) {
+        if (this._scale == 'human') {
+            return new _date_TLDate__WEBPACK_IMPORTED_MODULE_2__.TLDate(t);
+        } else if (this._scale == 'cosmological') {
+            return new _date_TLDate__WEBPACK_IMPORTED_MODULE_2__.BigDate(new _date_TLDate__WEBPACK_IMPORTED_MODULE_2__.BigYear(t));
+        }
+        throw new _core_TLError__WEBPACK_IMPORTED_MODULE_1__["default"]("time_scale_scale_err", this._scale);
+    }
+
+    getMajorScale() {
+        return this._axis_helper.major.name;
+    }
+
+    getMinorScale() {
+        return this._axis_helper.minor.name;
+    }
+
+    _assessGroups(slides) {
+        var groups = [];
+        var empty_group = false;
+        for (var i = 0; i < slides.length; i++) {
+            if (slides[i].group) {
+                if (groups.indexOf(slides[i].group) < 0) {
+                    groups.push(slides[i].group);
+                } else {
+                    empty_group = true;
+                }
+            }
+        };
+        if (groups.length && empty_group) {
+            groups.push('');
+        }
+        return groups;
+    }
+
+    /*  Compute the marker row positions, minimizing the number of overlaps */
+    _computeRowInfo(positions, rows_left) {
+        var lasts_in_row = [];
+        var n_overlaps = 0;
+        
+        // STEP 1: First pass - find the maximum manual level requested
+        var max_manual_level = -1;
+        for (var i = 0; i < this._slides.length; i++) {
+            if (this._slides[i] && this._slides[i].level !== undefined && this._slides[i].level !== null) {
+                var manual_level = parseInt(this._slides[i].level);
+                if (!isNaN(manual_level) && manual_level > max_manual_level) {
+                    max_manual_level = manual_level;
+                }
+            }
+        }
+        
+        // STEP 2: Pre-create all levels needed for manual assignments
+        var total_levels_needed = Math.max(max_manual_level + 1, 0);
+        for (var l = 0; l < total_levels_needed; l++) {
+            lasts_in_row.push(null);
+        }
+
+        // STEP 3: Process each event
+        for (var i = 0; i < positions.length; i++) {
+            var pos_info = positions[i];
+
+            // Handle manual level assignment from slide data
+            if (this._slides[i] && this._slides[i].level !== undefined && this._slides[i].level !== null) {
+                var manual_level = parseInt(this._slides[i].level);
+                
+                if (!isNaN(manual_level) && manual_level >= 0) {
+                    // Ensure the manual level exists (create if needed)
+                    while (lasts_in_row.length <= manual_level) {
+                        lasts_in_row.push(null);
+                    }
+                    
+                    // FORCE the event to the manual level
+                    pos_info.row = manual_level;
+                    lasts_in_row[manual_level] = pos_info;
+                    continue; // Skip automatic layout
+                }
+            }
+
+            // Automatic layout for events without manual levels
+            delete pos_info.row;
+            var overlaps = [];
+
+            for (var j = 0; j < lasts_in_row.length; j++) {
+                overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
+                if(overlaps[j] <= 0) {
+                    pos_info.row = j;
+                    lasts_in_row[j] = pos_info;
+                    break;
+                }
+            }
+
+            if (typeof(pos_info.row) == 'undefined') {
+                if (rows_left === null) {
+                    pos_info.row = lasts_in_row.length;
+                    lasts_in_row.push(pos_info);
+                } else if (rows_left > 0) {
+                    pos_info.row = lasts_in_row.length;
+                    lasts_in_row.push(pos_info);
+                    rows_left--;
+                } else {
+                    var min_overlap = Math.min.apply(null, overlaps);
+                    var idx = overlaps.indexOf(min_overlap);
+                    pos_info.row = idx;
+                    if (pos_info.end > lasts_in_row[idx].end) {
+                        lasts_in_row[idx] = pos_info;
+                    }
+                    n_overlaps++;
+                }
+            }
+        }
+
+        return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
+    }
+
+    /*  Compute marker positions */
+    _computePositionInfo(slides, max_rows, default_marker_width) {
+        default_marker_width = default_marker_width || 100;
+
+        // Make sure _positions is initialized (THIS WAS MISSING)
+        if (!this._positions) {
+            this._positions = [];
+        }
+        
+        var groups = [];
+        var empty_group = false;
+
+        // Set start/end/width; enumerate groups
+        for (var i = 0; i < slides.length; i++) {
+            var pos_info = {
+                start: this.getPosition(slides[i].start_date.getTime())
+            };
+            this._positions.push(pos_info);
+
+            if (typeof(slides[i].end_date) != 'undefined') {
+                var end_pos = this.getPosition(slides[i].end_date.getTime());
+                pos_info.width = end_pos - pos_info.start;
+                if (pos_info.width > default_marker_width) {
+                    pos_info.end = pos_info.start + pos_info.width;
+                } else {
+                    pos_info.end = pos_info.start + default_marker_width;
+                }
+            } else {
+                pos_info.width = default_marker_width;
+                pos_info.end = pos_info.start + default_marker_width;
+            }
+
+            if (slides[i].group) {
+                if (groups.indexOf(slides[i].group) < 0) {
+                    groups.push(slides[i].group);
+                }
+            } else {
+                empty_group = true;
+            }
+        }
+
+        if (!(groups.length)) {
+            var result = this._computeRowInfo(this._positions, max_rows);
+            this._number_of_rows = result.n_rows;
+        } else {
+            if (empty_group) {
+                groups.push("");
+            }
+
+            // Init group info
+            var group_info = [];
+
+            for (var i = 0; i < groups.length; i++) {
+                group_info[i] = {
+                    label: groups[i],
+                    idx: i,
+                    positions: [],
+                    n_rows: 1, // default
+                    n_overlaps: 0
+                };
+            }
+
+            for (var i = 0; i < this._positions.length; i++) {
+                var pos_info = this._positions[i];
+
+                pos_info.group = groups.indexOf(slides[i].group || "");
+                pos_info.row = 0;
+
+                var gi = group_info[pos_info.group];
+                for (var j = gi.positions.length - 1; j >= 0; j--) {
+                    if (gi.positions[j].end > pos_info.start) {
+                        gi.n_overlaps++;
+                    }
+                }
+
+                gi.positions.push(pos_info);
+            }
+
+            var n_rows = groups.length; // start with 1 row per group
+
+            while (true) {
+                // Count free rows available
+                var rows_left = Math.max(0, max_rows - n_rows);
+                if (!rows_left) {
+                    break; // no free rows, nothing to do
+                }
+
+                // Sort by # overlaps, idx
+                group_info.sort(function(a, b) {
+                    if (a.n_overlaps > b.n_overlaps) {
+                        return -1;
+                    } else if (a.n_overlaps < b.n_overlaps) {
+                        return 1;
+                    }
+                    return a.idx - b.idx;
+                });
+                if (!group_info[0].n_overlaps) {
+                    break; // no overlaps, nothing to do
+                }
+
+                // Distribute free rows among groups with overlaps
+                var n_rows = 0;
+                for (var i = 0; i < group_info.length; i++) {
+                    var gi = group_info[i];
+
+                    if (gi.n_overlaps && rows_left) {
+                        var res = this._computeRowInfo(gi.positions, gi.n_rows + 1);
+                        gi.n_rows = res.n_rows; // update group info
+                        gi.n_overlaps = res.n_overlaps;
+                        rows_left--; // update rows left
+                    }
+
+                    n_rows += gi.n_rows; // update rows used
+                }
+            }
+
+            // Set number of rows
+            this._number_of_rows = n_rows;
+
+            // Set group labels; offset row positions
+            this._group_labels = [];
+
+            group_info.sort(function(a, b) { return a.idx - b.idx; });
+
+            for (var i = 0, row_offset = 0; i < group_info.length; i++) {
+                this._group_labels.push({
+                    label: group_info[i].label,
+                    rows: group_info[i].n_rows
+                });
+
+                for (var j = 0; j < group_info[i].positions.length; j++) {
+                    var pos_info = group_info[i].positions[j];
+                    pos_info.row += row_offset;
+                }
+
+                row_offset += group_info[i].n_rows;
+            }
+        }
+    }
+
+    getAxisTickDateFormat(name) {
+        if (this._scale == 'cosmological') {
+            return 'compact'
+        }
+        return AXIS_TICK_DATEFORMAT_LOOKUP[name]
+    }
+}
+
 
 /***/ }),
 
