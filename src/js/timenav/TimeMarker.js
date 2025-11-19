@@ -226,9 +226,24 @@ export class TimeMarker {
 	}
 
 	setRowPosition(n, remainder) {
-		this.setPosition({ top: n });
-		this._el.timespan.style.height = remainder + "px";
-	}
+    // Get the level from the data if it exists
+    var level = this.data.level || 0;
+    
+    // Calculate horizontal offset based on level
+    var levelSpacing = 120; // Adjust this value as needed
+    var levelOffset = level * levelSpacing;
+    
+    // Set both vertical (row) and horizontal (level) positioning
+    this.setPosition({ 
+        top: n,
+        left: levelOffset 
+    });
+    
+    this._el.timespan.style.height = remainder + "px";
+    
+    // Add a CSS class for level-based styling
+    this._el.container.setAttribute('data-level', level);
+}
 
     getFormattedDate() {
         if (trim(this.data.display_date).length > 0) {
