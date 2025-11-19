@@ -158,104 +158,126 @@ export class TimeScale {
 
     /*  Compute the marker row positions, minimizing the number of overlaps */
     _computeRowInfo(positions, rows_left, group_index = null) {
-        var lasts_in_row = [];
-        var n_overlaps = 0;
+    var lasts_in_row = [];
+    var n_overlaps = 0;
+    
+    // STEP 1: First pass - collect manual level preferences
+    var manual_levels = {};
+    for (var i = 0; i < positions.length; i++) {
+        var pos_info = positions[i];
+        var slide_index = this._findSlideIndexByStartDate(pos_info.start_date_millis);
         
-        // STEP 1: First pass - find the maximum manual level requested WITHIN THIS GROUP
-        var max_manual_level = -1;
-        for (var i = 0; i < positions.length; i++) {
-            var pos_info = positions[i]; // FIX: Define pos_info here
-            var slide_index = this._findSlideIndexByStartDate(pos_info.start_date_millis);
+        if (slide_index >= 0 && this._slides[slide_index] && 
+            this._slides[slide_index].level !== undefined && 
+            this._slides[slide_index].level !== null) {
             
-            if (slide_index >= 0 && this._slides[slide_index] && 
-                this._slides[slide_index].level !== undefined && 
-                this._slides[slide_index].level !== null) {
-                
-                var manual_level = parseInt(this._slides[slide_index].level);
-                if (!isNaN(manual_level) && manual_level > max_manual_level) {
-                    max_manual_level = manual_level;
+            var manual_level = parseInt(this._slides[slide_index].level);
+            if (!isNaN(manual_level) && manual_level >= 0) {
+                // Store manual level preference but don't assign yet
+                pos_info.preferred_level = manual_level;
+                if (!manual_levels[manual_level]) {
+                    manual_levels[manual_level] = [];
                 }
+                manual_levels[manual_level].push(pos_info);
             }
         }
-        
-        // STEP 2: Pre-create all levels needed for manual assignments
-        var total_levels_needed = Math.max(max_manual_level + 1, 0);
-        for (var l = 0; l < total_levels_needed; l++) {
-            lasts_in_row.push(null);
-        }
-
-        // STEP 3: Process each event
-        for (var i = 0; i < positions.length; i++) {
-            var pos_info = positions[i];
-
-            // Find the corresponding slide to get level information - FIXED ARROW FUNCTION
-            var slide_index = -1;
-            for (var s = 0; s < this._slides.length; s++) {
-                if (this._slides[s].start_date.getTime() === pos_info.start_date_millis) {
-                    slide_index = s;
-                    break;
-                }
-            }
-            
-            var current_slide = slide_index >= 0 ? this._slides[slide_index] : null;
-
-            // Handle manual level assignment from slide data
-            if (current_slide && current_slide.level !== undefined && current_slide.level !== null) {
-                var manual_level = parseInt(current_slide.level);
-                
-                if (!isNaN(manual_level) && manual_level >= 0) {
-                    // Ensure the manual level exists (create if needed)
-                    while (lasts_in_row.length <= manual_level) {
-                        lasts_in_row.push(null);
-                    }
-                    
-                    // FORCE the event to the manual level WITHIN THIS GROUP
-                    pos_info.row = manual_level;
-                    pos_info.level = manual_level; // Store level for rendering
-                    lasts_in_row[manual_level] = pos_info;
-                    continue; // Skip automatic layout
-                }
-            }
-
-            // Automatic layout for events without manual levels
-            delete pos_info.row;
-            var overlaps = [];
-
-            for (var j = 0; j < lasts_in_row.length; j++) {
-                overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
-                if(overlaps[j] <= 0) {
-                    pos_info.row = j;
-                    pos_info.level = j; // Store level for rendering
-                    lasts_in_row[j] = pos_info;
-                    break;
-                }
-            }
-
-            if (typeof(pos_info.row) == 'undefined') {
-                if (rows_left === null) {
-                    pos_info.row = lasts_in_row.length;
-                    pos_info.level = lasts_in_row.length;
-                    lasts_in_row.push(pos_info);
-                } else if (rows_left > 0) {
-                    pos_info.row = lasts_in_row.length;
-                    pos_info.level = lasts_in_row.length;
-                    lasts_in_row.push(pos_info);
-                    rows_left--;
-                } else {
-                    var min_overlap = Math.min.apply(null, overlaps);
-                    var idx = overlaps.indexOf(min_overlap);
-                    pos_info.row = idx;
-                    pos_info.level = idx;
-                    if (pos_info.end > lasts_in_row[idx].end) {
-                        lasts_in_row[idx] = pos_info;
-                    }
-                    n_overlaps++;
-                }
-            }
-        }
-
-        return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
     }
+    
+    // STEP 2: Pre-create levels for manual assignments
+    var max_manual_level = Object.keys(manual_levels).length > 0 ? 
+        Math.max.apply(null, Object.keys(manual_levels).map(Number)) : -1;
+    var total_levels_needed = Math.max(max_manual_level + 1, 0);
+    
+    for (var l = 0; l < total_levels_needed; l++) {
+        lasts_in_row.push(null);
+    }
+
+    // STEP 3: Process each event with level awareness
+    for (var i = 0; i < positions.length; i++) {
+        var pos_info = positions[i];
+        var has_manual_level = pos_info.preferred_level !== undefined;
+
+        // Try to honor manual level preference first
+        if (has_manual_level) {
+            var preferred_level = pos_info.preferred_level;
+            
+            // Ensure the preferred level exists
+            while (lasts_in_row.length <= preferred_level) {
+                lasts_in_row.push(null);
+            }
+            
+            // Check if preferred level is available (no overlap)
+            var last_in_preferred = lasts_in_row[preferred_level];
+            if (!last_in_preferred || last_in_preferred.end <= pos_info.start) {
+                // Level is available - use it
+                pos_info.row = preferred_level;
+                pos_info.level = preferred_level;
+                lasts_in_row[preferred_level] = pos_info;
+                continue;
+            }
+            // If preferred level is occupied, fall through to automatic assignment
+        }
+
+        // Automatic layout (for no manual level or occupied preferred level)
+        delete pos_info.row;
+        var overlaps = [];
+        var available_levels = [];
+
+        // Find available levels
+        for (var j = 0; j < lasts_in_row.length; j++) {
+            var overlap = lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1;
+            overlaps.push(overlap);
+            if (overlap <= 0) {
+                available_levels.push(j);
+            }
+        }
+
+        // Try to use preferred level if it's available (even if occupied, we check order)
+        if (has_manual_level && available_levels.length > 0) {
+            var preferred_level = pos_info.preferred_level;
+            if (available_levels.indexOf(preferred_level) >= 0) {
+                // Use preferred level if available
+                pos_info.row = preferred_level;
+                pos_info.level = preferred_level;
+                lasts_in_row[preferred_level] = pos_info;
+                continue;
+            }
+        }
+
+        // Standard automatic assignment
+        if (available_levels.length > 0) {
+            // Use first available level
+            var chosen_level = available_levels[0];
+            pos_info.row = chosen_level;
+            pos_info.level = chosen_level;
+            lasts_in_row[chosen_level] = pos_info;
+        } else {
+            // No available levels - need to create new level or overlap
+            if (rows_left === null) {
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
+            } else if (rows_left > 0) {
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
+                rows_left--;
+            } else {
+                // Find level with minimum overlap
+                var min_overlap = Math.min.apply(null, overlaps);
+                var idx = overlaps.indexOf(min_overlap);
+                pos_info.row = idx;
+                pos_info.level = idx;
+                if (pos_info.end > lasts_in_row[idx].end) {
+                    lasts_in_row[idx] = pos_info;
+                }
+                n_overlaps++;
+            }
+        }
+    }
+
+    return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
+}
 
     /*  Compute marker positions */
     _computePositionInfo(slides, max_rows, default_marker_width) {
