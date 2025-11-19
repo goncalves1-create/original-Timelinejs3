@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Timeline Test - 5 Levels</title>
+    <link rel="stylesheet" href="dist/css/timeline.css">
+    <style>
+        #timeline-embed { width: 100%; height: 800px; }
+    </style>
+</head>
+<body>
+    <div id="timeline-embed"></div>
+
+    <script src="dist/js/timeline.js"></script>
+    <script>
+        // Test with 5 different levels
+        var testData = {
+            "title": {
+                "text": {
+                    "headline": "Multi-Level Timeline Test",
+                    "text": "Testing 5 different levels"
+                }
+            },
+            "events": [
+                {
+                    "start_date": { "year": "2020", "month": "1" },
+                    "text": {
+                        "headline": "Level 0 Event",
+                        "text": "This should be at the bottom level"
+                    },
+                    "level": 0
+                },
+                {
+                    "start_date": { "year": "2020", "month": "3" },
+                    "text": {
+                        "headline": "Level 1 Event",
+                        "text": "This should be one level up"
+                    },
+                    "level": 1
+                },
+                {
+                    "start_date": { "year": "2020", "month": "6" },
+                    "text": {
+                        "headline": "Level 2 Event", 
+                        "text": "This should be at level 2"
+                    },
+                    "level": 2
+                },
+                {
+                    "start_date": { "year": "2020", "month": "9" },
+                    "text": {
+                        "headline": "Level 3 Event",
+                        "text": "This should be at level 3"
+                    },
+                    "level": 3
+                },
+                {
+                    "start_date": { "year": "2021", "month": "1" },
+                    "text": {
+                        "headline": "Level 4 Event",
+                        "text": "This should be at the top level"
+                    },
+                    "level": 4
+                },
+                {
+                    "start_date": { "year": "2021", "month": "6" },
+                    "text": {
+                        "headline": "Another Level 0 Event",
+                        "text": "Back to level 0"
+                    },
+                    "level": 0
+                }
+            ]
+        };
+
+        try {
+            console.log('Testing with 5 levels...');
+            var timeline = new TL.Timeline('timeline-embed', testData);
+            console.log('Success with 5 levels!');
+        } catch (error) {
+            console.error('Error with 5 levels:', error);
+        }
+    </script>
+</body>
+</html>
