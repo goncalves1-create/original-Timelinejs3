@@ -157,83 +157,103 @@ export class TimeScale {
     }
 
     /*  Compute the marker row positions, minimizing the number of overlaps */
-    _computeRowInfo(positions, rows_left) {
-        var lasts_in_row = [];
-        var n_overlaps = 0;
+    /*  Compute the marker row positions, minimizing the number of overlaps */
+_computeRowInfo(positions, rows_left, group_index = null) {
+    var lasts_in_row = [];
+    var n_overlaps = 0;
+    
+    // STEP 1: First pass - find the maximum manual level requested WITHIN THIS GROUP
+    var max_manual_level = -1;
+    for (var i = 0; i < positions.length; i++) {
+        var slide_index = this._slides.findIndex(s => 
+            s.start_date.getTime() === positions[i].start_date_millis
+        );
         
-        // STEP 1: First pass - find the maximum manual level requested
-        var max_manual_level = -1;
-        for (var i = 0; i < this._slides.length; i++) {
-            if (this._slides[i] && this._slides[i].level !== undefined && this._slides[i].level !== null) {
-                var manual_level = parseInt(this._slides[i].level);
-                if (!isNaN(manual_level) && manual_level > max_manual_level) {
-                    max_manual_level = manual_level;
-                }
+        if (slide_index >= 0 && this._slides[slide_index] && 
+            this._slides[slide_index].level !== undefined && 
+            this._slides[slide_index].level !== null) {
+            
+            var manual_level = parseInt(this._slides[slide_index].level);
+            if (!isNaN(manual_level) && manual_level > max_manual_level) {
+                max_manual_level = manual_level;
             }
         }
-        
-        // STEP 2: Pre-create all levels needed for manual assignments
-        var total_levels_needed = Math.max(max_manual_level + 1, 0);
-        for (var l = 0; l < total_levels_needed; l++) {
-            lasts_in_row.push(null);
-        }
-
-        // STEP 3: Process each event
-        for (var i = 0; i < positions.length; i++) {
-            var pos_info = positions[i];
-
-            // Handle manual level assignment from slide data
-            if (this._slides[i] && this._slides[i].level !== undefined && this._slides[i].level !== null) {
-                var manual_level = parseInt(this._slides[i].level);
-                
-                if (!isNaN(manual_level) && manual_level >= 0) {
-                    // Ensure the manual level exists (create if needed)
-                    while (lasts_in_row.length <= manual_level) {
-                        lasts_in_row.push(null);
-                    }
-                    
-                    // FORCE the event to the manual level
-                    pos_info.row = manual_level;
-                    lasts_in_row[manual_level] = pos_info;
-                    continue; // Skip automatic layout
-                }
-            }
-
-            // Automatic layout for events without manual levels
-            delete pos_info.row;
-            var overlaps = [];
-
-            for (var j = 0; j < lasts_in_row.length; j++) {
-                overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
-                if(overlaps[j] <= 0) {
-                    pos_info.row = j;
-                    lasts_in_row[j] = pos_info;
-                    break;
-                }
-            }
-
-            if (typeof(pos_info.row) == 'undefined') {
-                if (rows_left === null) {
-                    pos_info.row = lasts_in_row.length;
-                    lasts_in_row.push(pos_info);
-                } else if (rows_left > 0) {
-                    pos_info.row = lasts_in_row.length;
-                    lasts_in_row.push(pos_info);
-                    rows_left--;
-                } else {
-                    var min_overlap = Math.min.apply(null, overlaps);
-                    var idx = overlaps.indexOf(min_overlap);
-                    pos_info.row = idx;
-                    if (pos_info.end > lasts_in_row[idx].end) {
-                        lasts_in_row[idx] = pos_info;
-                    }
-                    n_overlaps++;
-                }
-            }
-        }
-
-        return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
     }
+    
+    // STEP 2: Pre-create all levels needed for manual assignments
+    var total_levels_needed = Math.max(max_manual_level + 1, 0);
+    for (var l = 0; l < total_levels_needed; l++) {
+        lasts_in_row.push(null);
+    }
+
+    // STEP 3: Process each event
+    for (var i = 0; i < positions.length; i++) {
+        var pos_info = positions[i];
+
+        // Find the corresponding slide to get level information
+        var slide_index = this._slides.findIndex(s => 
+            s.start_date.getTime() === pos_info.start_date_millis
+        );
+        
+        var current_slide = slide_index >= 0 ? this._slides[slide_index] : null;
+
+        // Handle manual level assignment from slide data
+        if (current_slide && current_slide.level !== undefined && current_slide.level !== null) {
+            var manual_level = parseInt(current_slide.level);
+            
+            if (!isNaN(manual_level) && manual_level >= 0) {
+                // Ensure the manual level exists (create if needed)
+                while (lasts_in_row.length <= manual_level) {
+                    lasts_in_row.push(null);
+                }
+                
+                // FORCE the event to the manual level WITHIN THIS GROUP
+                pos_info.row = manual_level;
+                pos_info.level = manual_level; // Store level for rendering
+                lasts_in_row[manual_level] = pos_info;
+                continue; // Skip automatic layout
+            }
+        }
+
+        // Automatic layout for events without manual levels
+        delete pos_info.row;
+        var overlaps = [];
+
+        for (var j = 0; j < lasts_in_row.length; j++) {
+            overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
+            if(overlaps[j] <= 0) {
+                pos_info.row = j;
+                pos_info.level = j; // Store level for rendering
+                lasts_in_row[j] = pos_info;
+                break;
+            }
+        }
+
+        if (typeof(pos_info.row) == 'undefined') {
+            if (rows_left === null) {
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
+            } else if (rows_left > 0) {
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
+                rows_left--;
+            } else {
+                var min_overlap = Math.min.apply(null, overlaps);
+                var idx = overlaps.indexOf(min_overlap);
+                pos_info.row = idx;
+                pos_info.level = idx;
+                if (pos_info.end > lasts_in_row[idx].end) {
+                    lasts_in_row[idx] = pos_info;
+                }
+                n_overlaps++;
+            }
+        }
+    }
+
+    return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
+}
 
     /*  Compute marker positions */
     _computePositionInfo(slides, max_rows, default_marker_width) {
