@@ -11,25 +11,16 @@
     
  <script type="text/javascript">
 timeline = new TL.Timeline('timeline-embed',
-    'https://docs.google.com/spreadsheets/d/e/2PACX-1vRrTFku6iNKaM_OenaASfDDwzqwxilUS-Nomtk4PcU_E3F3BExfFGVByb3EGWkVt__JUYRsBiS1oZwN/pubhtml',
-    {
-        language: "pt",
-        start_at_end: false,
-        zoom_level: 0,
-        timenav_height: 100,
-        scale_factor: 1
-    }
-);
-
-// Debug events
-timeline.on('loaded', function() {
-    console.log('Timeline loaded successfully!');
-    console.log('Events:', timeline.getData().events);
-});
-
-timeline.on('error', function(err) {
-    console.error('Timeline error:', err);
-});
+        'https://docs.google.com/spreadsheets/d/e/2PACX-1vRrTFku6iNKaM_OenaASfDDwzqwxilUS-Nomtk4PcU_E3F3BExfFGVByb3EGWkVt__JUYRsBiS1oZwN/pubhtml',
+        {
+            language: "pt",
+            start_at_end: false,
+         zoom_level: 0,
+         scale_factor: 0.1,
+            timenav_height: 100,
+            scale_factor: 1
+        }
+    );
 
 
 
