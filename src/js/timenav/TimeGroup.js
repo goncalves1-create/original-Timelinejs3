@@ -52,11 +52,16 @@ export class TimeGroup {
 	}
 	
 	setRowPosition(n, h) {
-		this.options.height = h * this.data.rows;
-		this.setPosition({top:n});
-		this._el.container.style.height = this.options.height + "px";
-		
-	}
+    this.options.height = h * this.data.rows;
+    this.setPosition({top:n});
+    this._el.container.style.height = this.options.height + "px";
+    
+    // ADD LEVEL AWARENESS - groups need to span the full width of all levels
+    var totalLevels = 6; // You'll need to get this from somewhere, maybe pass it as parameter
+    var levelSpacing = 120;
+    this._el.container.style.width = (totalLevels * levelSpacing) + "px";
+    this._el.container.style.left = "0px"; // Ensure groups start at left edge
+}
 	
 	setAlternateRowColor(alternate, hide) {
 		var class_name = "tl-timegroup";
