@@ -42,7 +42,7 @@ export class TimeScale {
         this._pixel_width = this._screen_multiplier * this._display_width;
 
         this._group_labels = undefined;
-        this._positions = [];
+        this._positions = []; // INITIALIZE POSITIONS ARRAY
         this._pixels_per_milli = 0;
 
         this._earliest = timeline_config.getEarliestDate().getTime();
@@ -85,12 +85,8 @@ export class TimeScale {
 
         return 200000; // what is the right handling for cosmo dates?
     }
+    
     getGroupLabels() {
-        /*
-               return an array of objects, one per group, in the order (top to bottom) that the groups are expected to appear. Each object will have two properties:
-                   * label (the string as specified in one or more 'group' properties of events in the configuration)
-                   * rows (the number of rows occupied by events associated with the label. )
-               */
         return (this._group_labels || []);
     }
 
@@ -107,10 +103,6 @@ export class TimeScale {
     }
 
     getPosition(time_in_millis) {
-        // be careful using millis, as they won't scale to cosmological time.
-        // however, we're moving to make the arg to this whatever value
-        // comes from TLDate.getTime() which could be made smart about that --
-        // so it may just be about the naming.
         return (time_in_millis - this._earliest) * this._pixels_per_milli
     }
 
@@ -164,60 +156,94 @@ export class TimeScale {
         return groups;
     }
 
-    /*  Compute the marker row positions, minimizing the number of
-        overlaps.
-
-        @positions = list of objects from this._positions
-        @rows_left = number of rows available (assume > 0)
-    */
-
-    _findSlideByPosition(position_info) {
-    // Find the slide that corresponds to this position info
-    // This assumes we have access to the slides array
-    for (var i = 0; i < this._slides.length; i++) {
-        var slide_pos = this.getPosition(this._slides[i].start_date.getTime());
-        if (Math.abs(slide_pos - position_info.start) < 1) { // Fuzzy match
-            return this._slides[i];
-        }
-    }
-    return null;
-}
-    
+    /*  Compute the marker row positions, minimizing the number of overlaps */
     _computeRowInfo(positions, rows_left) {
-    // USE MANUAL LEVELS FROM GOOGLE SHEETS INSTEAD OF AUTOMATIC CALCULATION
-    for (var i = 0; i < positions.length; i++) {
-        var pos_info = positions[i];
-        var slide = this._findSlideByPosition(pos_info); // We need to get the slide data
+        var lasts_in_row = [];
+        var n_overlaps = 0;
         
-        // Use manual level from Google Sheets data
-        // If no level specified, default to 0
-        pos_info.row = (slide && slide.data.level !== undefined) ? slide.data.level : 0;
-        
-        // Ensure row doesn't exceed available rows
-        if (rows_left !== null && pos_info.row >= rows_left) {
-            pos_info.row = rows_left - 1;
+        // STEP 1: First pass - find the maximum manual level requested
+        var max_manual_level = -1;
+        for (var i = 0; i < this._slides.length; i++) {
+            if (this._slides[i] && this._slides[i].level !== undefined && this._slides[i].level !== null) {
+                var manual_level = parseInt(this._slides[i].level);
+                if (!isNaN(manual_level) && manual_level > max_manual_level) {
+                    max_manual_level = manual_level;
+                }
+            }
         }
+        
+        // STEP 2: Pre-create all levels needed for manual assignments
+        var total_levels_needed = Math.max(max_manual_level + 1, 0);
+        for (var l = 0; l < total_levels_needed; l++) {
+            lasts_in_row.push(null);
+        }
+
+        // STEP 3: Process each event
+        for (var i = 0; i < positions.length; i++) {
+            var pos_info = positions[i];
+
+            // Handle manual level assignment from slide data
+            if (this._slides[i] && this._slides[i].level !== undefined && this._slides[i].level !== null) {
+                var manual_level = parseInt(this._slides[i].level);
+                
+                if (!isNaN(manual_level) && manual_level >= 0) {
+                    // Ensure the manual level exists (create if needed)
+                    while (lasts_in_row.length <= manual_level) {
+                        lasts_in_row.push(null);
+                    }
+                    
+                    // FORCE the event to the manual level
+                    pos_info.row = manual_level;
+                    lasts_in_row[manual_level] = pos_info;
+                    continue; // Skip automatic layout
+                }
+            }
+
+            // Automatic layout for events without manual levels
+            delete pos_info.row;
+            var overlaps = [];
+
+            for (var j = 0; j < lasts_in_row.length; j++) {
+                overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
+                if(overlaps[j] <= 0) {
+                    pos_info.row = j;
+                    lasts_in_row[j] = pos_info;
+                    break;
+                }
+            }
+
+            if (typeof(pos_info.row) == 'undefined') {
+                if (rows_left === null) {
+                    pos_info.row = lasts_in_row.length;
+                    lasts_in_row.push(pos_info);
+                } else if (rows_left > 0) {
+                    pos_info.row = lasts_in_row.length;
+                    lasts_in_row.push(pos_info);
+                    rows_left--;
+                } else {
+                    var min_overlap = Math.min.apply(null, overlaps);
+                    var idx = overlaps.indexOf(min_overlap);
+                    pos_info.row = idx;
+                    if (pos_info.end > lasts_in_row[idx].end) {
+                        lasts_in_row[idx] = pos_info;
+                    }
+                    n_overlaps++;
+                }
+            }
+        }
+
+        return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
     }
 
-    // Calculate actual number of rows used
-    var used_rows = {};
-    for (var i = 0; i < positions.length; i++) {
-        used_rows[positions[i].row] = true;
-    }
-    var n_rows = Object.keys(used_rows).length;
-
-    return { n_rows: n_rows, n_overlaps: 0 }; // No overlaps with manual levels
-}
-
-    /*  Compute marker positions.  If using groups, this._number_of_rows
-        will never be less than the number of groups.
-
-        @max_rows = total number of available rows
-        @default_marker_width should be in pixels
-    */
+    /*  Compute marker positions */
     _computePositionInfo(slides, max_rows, default_marker_width) {
         default_marker_width = default_marker_width || 100;
 
+        // Make sure _positions is initialized (THIS WAS MISSING)
+        if (!this._positions) {
+            this._positions = [];
+        }
+        
         var groups = [];
         var empty_group = false;
 
@@ -347,23 +373,12 @@ export class TimeScale {
                 row_offset += group_info[i].n_rows;
             }
         }
-
     }
 
-
-
-
-    /**
-     * To handle formatting cosmological ticks correctly, let the TimeScale (which knows)
-     * give us the format for tick labels on the time axis.
-     * @param {String} name - the "level" of dates in the axis
-     */
     getAxisTickDateFormat(name) {
         if (this._scale == 'cosmological') {
-            return 'compact' // is this heavy-handed? cosmologic
+            return 'compact'
         }
-
         return AXIS_TICK_DATEFORMAT_LOOKUP[name]
-
     }
 }
