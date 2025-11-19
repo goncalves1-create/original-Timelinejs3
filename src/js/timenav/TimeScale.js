@@ -409,6 +409,5 @@ _computeRowInfo(positions, rows_left, group_index = null) {
             }
         }
         return -1;
-    }
 
 }
