@@ -165,9 +165,7 @@ _computeRowInfo(positions, rows_left, group_index = null) {
     // STEP 1: First pass - find the maximum manual level requested WITHIN THIS GROUP
     var max_manual_level = -1;
     for (var i = 0; i < positions.length; i++) {
-        var slide_index = this._slides.findIndex(s => 
-            s.start_date.getTime() === positions[i].start_date_millis
-        );
+        var slide_index = this._findSlideIndexByStartDate(pos_info.start_date_millis);
         
         if (slide_index >= 0 && this._slides[slide_index] && 
             this._slides[slide_index].level !== undefined && 
@@ -401,5 +399,14 @@ _computeRowInfo(positions, rows_left, group_index = null) {
             return 'compact'
         }
         return AXIS_TICK_DATEFORMAT_LOOKUP[name]
+         // ADD THIS HELPER FUNCTION RIGHT HERE:
+    
+        _findSlideIndexByStartDate(start_date_millis) {
+        for (var i = 0; i < this._slides.length; i++) {
+            if (this._slides[i].start_date.getTime() === start_date_millis) {
+                return i;
+            }
+        }
+        return -1;
     }
 }
