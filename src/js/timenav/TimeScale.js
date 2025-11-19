@@ -158,8 +158,7 @@ export class TimeScale {
 
     /*  Compute the marker row positions, minimizing the number of overlaps */
     _computeRowInfo(positions, rows_left, group_index = null) {
-    // CHANGE: Track arrays of events per level instead of just the last event
-    var events_in_level = [];
+    var lasts_in_row = [];
     var n_overlaps = 0;
     
     // STEP 1: First pass - find the maximum manual level requested WITHIN THIS GROUP
@@ -182,7 +181,7 @@ export class TimeScale {
     // STEP 2: Pre-create all levels needed for manual assignments
     var total_levels_needed = Math.max(max_manual_level + 1, 0);
     for (var l = 0; l < total_levels_needed; l++) {
-        events_in_level.push([]); // CHANGE: Initialize as empty arrays
+        lasts_in_row.push(null);
     }
 
     // STEP 3: Process each event
@@ -202,82 +201,69 @@ export class TimeScale {
             
             if (!isNaN(manual_level) && manual_level >= 0) {
                 // Ensure the manual level exists (create if needed)
-                while (events_in_level.length <= manual_level) {
-                    events_in_level.push([]);
+                while (lasts_in_row.length <= manual_level) {
+                    lasts_in_row.push(null);
                 }
                 
-                // CHECK FOR OVERLAPS WITHIN THE SAME LEVEL
-                var has_overlap_in_level = false;
-                for (var j = 0; j < events_in_level[manual_level].length; j++) {
-                    var existing_event = events_in_level[manual_level][j];
-                    // Check if events overlap chronologically
-                    if (pos_info.start < existing_event.end && existing_event.start < pos_info.end) {
-                        has_overlap_in_level = true;
-                        break;
+                // Check if we can place this event in the requested level without overlapping
+                var can_use_manual_level = true;
+                if (lasts_in_row[manual_level] !== null) {
+                    // Check if this event overlaps with the last event in this level
+                    var last_event = lasts_in_row[manual_level];
+                    if (pos_info.start < last_event.end) {
+                        // They overlap - cannot use manual level
+                        can_use_manual_level = false;
                     }
                 }
                 
-                // If no overlap in this level, assign to manual level
-                if (!has_overlap_in_level) {
+                if (can_use_manual_level) {
                     pos_info.row = manual_level;
                     pos_info.level = manual_level;
-                    events_in_level[manual_level].push(pos_info); // Track this event in the level
+                    lasts_in_row[manual_level] = pos_info;
                     continue; // Skip automatic layout
                 }
-                // If there's overlap in the manual level, fall through to automatic layout
+                // If manual level is occupied, fall through to automatic layout
             }
         }
 
-        // Automatic layout for events without manual levels or with occupied manual levels
+        // Automatic layout for events without manual levels
         delete pos_info.row;
-        var available_levels = [];
+        var overlaps = [];
 
-        // Find available levels (no chronological overlaps)
-        for (var level_idx = 0; level_idx < events_in_level.length; level_idx++) {
-            var level_available = true;
-            
-            // Check all events in this level for overlaps
-            for (var j = 0; j < events_in_level[level_idx].length; j++) {
-                var existing_event = events_in_level[level_idx][j];
-                if (pos_info.start < existing_event.end && existing_event.start < pos_info.end) {
-                    level_available = false;
-                    break;
-                }
-            }
-            
-            if (level_available) {
-                available_levels.push(level_idx);
+        for (var j = 0; j < lasts_in_row.length; j++) {
+            overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
+            if(overlaps[j] <= 0) {
+                pos_info.row = j;
+                pos_info.level = j; // Store level for rendering
+                lasts_in_row[j] = pos_info;
+                break;
             }
         }
 
-        // Assign to first available level
-        if (available_levels.length > 0) {
-            var chosen_level = available_levels[0];
-            pos_info.row = chosen_level;
-            pos_info.level = chosen_level;
-            events_in_level[chosen_level].push(pos_info);
-        } else {
-            // No available levels - create new level
+        if (typeof(pos_info.row) == 'undefined') {
             if (rows_left === null) {
-                pos_info.row = events_in_level.length;
-                pos_info.level = events_in_level.length;
-                events_in_level.push([pos_info]);
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
             } else if (rows_left > 0) {
-                pos_info.row = events_in_level.length;
-                pos_info.level = events_in_level.length;
-                events_in_level.push([pos_info]);
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
                 rows_left--;
             } else {
-                // Find level with minimum overlap (simplified for now)
-                pos_info.row = events_in_level.length;
-                pos_info.level = events_in_level.length;
-                events_in_level.push([pos_info]);
+                var min_overlap = Math.min.apply(null, overlaps);
+                var idx = overlaps.indexOf(min_overlap);
+                pos_info.row = idx;
+                pos_info.level = idx;
+                if (pos_info.end > lasts_in_row[idx].end) {
+                    lasts_in_row[idx] = pos_info;
+                }
                 n_overlaps++;
             }
         }
     }
 
-    return {n_rows: events_in_level.length, n_overlaps: n_overlaps};
+    return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
 }
 
     /*  Compute marker positions */
