@@ -394,14 +394,15 @@ _computeRowInfo(positions, rows_left, group_index = null) {
         }
     }
 
-    getAxisTickDateFormat(name) {
+        getAxisTickDateFormat(name) {
         if (this._scale == 'cosmological') {
             return 'compact'
         }
         return AXIS_TICK_DATEFORMAT_LOOKUP[name]
-         // ADD THIS HELPER FUNCTION RIGHT HERE:
-    
-        _findSlideIndexByStartDate(start_date_millis) {
+    }
+
+    // ADD THIS HELPER FUNCTION RIGHT HERE:
+    _findSlideIndexByStartDate(start_date_millis) {
         for (var i = 0; i < this._slides.length; i++) {
             if (this._slides[i].start_date.getTime() === start_date_millis) {
                 return i;
@@ -409,5 +410,5 @@ _computeRowInfo(positions, rows_left, group_index = null) {
         }
         return -1;
     }
-}
 
+}
