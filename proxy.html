@@ -5,15 +5,68 @@
 </head>
 <body>
     <script>
-        // Fetch the Google Sheets data and pass it to parent window
-        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRrTFku6iNKaM_OenaASfDDwzqwxilUS-Nomtk4PcU_E3F3BExfFGVByb3EGWkVt__JUYRsBiS1oZwN/pubhtml')
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRrTFku6iNKaM_OenaASfDDwzqwxilUS-Nomtk4PcU_E3F3BExfFGVByb3EGWkVt__JUYRsBiS1oZwN/pub?output=csv')
             .then(response => response.text())
-            .then(data => {
-                window.parent.postMessage({ type: 'sheetsData', data: data }, '*');
+            .then(csvData => {
+                const events = parseCSV(csvData);
+                window.parent.postMessage({ 
+                    type: 'sheetsData', 
+                    data: { events: events } 
+                }, '*');
             })
             .catch(error => {
                 console.error('Error:', error);
+                window.parent.postMessage({ 
+                    type: 'sheetsError', 
+                    error: error.toString() 
+                }, '*');
             });
+
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+            const events = [];
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+                const event = { start_date: {}, text: {} };
+                
+                // Map CSV columns to TimelineJS structure
+                headers.forEach((header, index) => {
+                    if (values[index]) {
+                        switch(header.toLowerCase()) {
+                            case 'year':
+                                event.start_date.year = values[index];
+                                break;
+                            case 'month':
+                                event.start_date.month = values[index];
+                                break;
+                            case 'day':
+                                event.start_date.day = values[index];
+                                break;
+                            case 'headline':
+                                event.text.headline = values[index];
+                                break;
+                            case 'text':
+                                event.text.text = values[index];
+                                break;
+                            case 'level':
+                                event.level = parseInt(values[index]) || 1;
+                                break;
+                        }
+                    }
+                });
+                
+                // Only add event if it has at least a year
+                if (event.start_date.year) {
+                    events.push(event);
+                }
+            }
+            
+            return events;
+        }
     </script>
 </body>
 </html>
