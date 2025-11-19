@@ -51,15 +51,12 @@ export class TimeGroup {
 		
 	}
 	
-	setRowPosition(n, h, max_levels = 1) {
-    // Calculate height based on levels instead of just rows
-    var level_height = h; // Height per level
-    var total_height = level_height * max_levels;
-    
-    this.options.height = total_height;
-    this.setPosition({top:n});
-    this._el.container.style.height = this.options.height + "px";
-}
+	setRowPosition(n, h) {
+		this.options.height = h * this.data.rows;
+		this.setPosition({top:n});
+		this._el.container.style.height = this.options.height + "px";
+		
+	}
 	
 	setAlternateRowColor(alternate, hide) {
 		var class_name = "tl-timegroup";
