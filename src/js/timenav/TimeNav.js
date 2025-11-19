@@ -362,16 +362,16 @@ export class TimeNav {
         // Set Height
         this._markers[i].setHeight(marker_height);
 
-        //Position by Row AND Level
+        // Get BOTH row AND level information
         var pos_info = this.timescale.getPositionInfo(i);
         var row = pos_info.row;
-        var level = pos_info.level || 0; // GET THE LEVEL FROM TIMESCALE
+        var level = pos_info.level || 0; // <-- GET THE LEVEL
 
         var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + this.options.marker_padding;
         var remainder_height = available_height - marker_y + this.options.marker_padding;
         
-        // PASS LEVEL INFORMATION TO THE MARKER
-        this._markers[i].data.level = level; // Store level in marker data
+        // PASS LEVEL TO MARKER
+        this._markers[i].data.level = level; // <-- STORE LEVEL IN MARKER DATA
         this._markers[i].setRowPosition(marker_y, remainder_height);
     };
 }
