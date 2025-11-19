@@ -1,80 +1,117 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Vertical Timeline Test</title>
-    <link rel="stylesheet" href="dist/css/timeline.css">
+    <meta charset="utf-8">
+    <title>Timeline Test - Groups + Levels</title>
+    <link rel="stylesheet" href="css/timeline.css">
+    <style>
+        #timeline-embed { width: 100%; height: 800px; }
+    </style>
 </head>
 <body>
-    <div id="timeline-embed" style="height: 600px; width: 100%;"></div>
+    <div id="timeline-embed"></div>
 
-    <script src="dist/js/timeline.js"></script>
+    <script src="js/timeline.js"></script>
     <script>
-        // Test with 5 different levels
+        // Test with GROUPS and LEVELS combined
         var testData = {
             "title": {
                 "text": {
-                    "headline": "Multi-Level Timeline Test",
-                    "text": "Testing 5 different levels"
+                    "headline": "Groups + Levels Test",
+                    "text": "Testing levels within groups"
                 }
             },
             "events": [
+                // GROUP 1 - Estrutura
                 {
                     "start_date": { "year": "2020", "month": "1" },
                     "text": {
-                        "headline": "Level 0 Event",
-                        "text": "This should be at the bottom level"
+                        "headline": "Group 1 - Level 0",
+                        "text": "Estrutura group, bottom level"
                     },
+                    "group": "Estrutura",
                     "level": 0
                 },
                 {
                     "start_date": { "year": "2020", "month": "3" },
                     "text": {
-                        "headline": "Level 1 Event",
-                        "text": "This should be one level up"
+                        "headline": "Group 1 - Level 1", 
+                        "text": "Estrutura group, middle level"
                     },
+                    "group": "Estrutura",
                     "level": 1
                 },
                 {
                     "start_date": { "year": "2020", "month": "6" },
                     "text": {
-                        "headline": "Level 2 Event", 
-                        "text": "This should be at level 2"
+                        "headline": "Group 1 - Level 2",
+                        "text": "Estrutura group, top level"
                     },
+                    "group": "Estrutura",
                     "level": 2
                 },
+                
+                // GROUP 2 - Conjuntura  
                 {
-                    "start_date": { "year": "2020", "month": "9" },
+                    "start_date": { "year": "2020", "month": "2" },
                     "text": {
-                        "headline": "Level 3 Event",
-                        "text": "This should be at level 3"
+                        "headline": "Group 2 - Level 0",
+                        "text": "Conjuntura group, bottom level"
                     },
-                    "level": 3
-                },
-                {
-                    "start_date": { "year": "2021", "month": "1" },
-                    "text": {
-                        "headline": "Level 4 Event",
-                        "text": "This should be at the top level"
-                    },
-                    "level": 4
-                },
-                {
-                    "start_date": { "year": "2021", "month": "6" },
-                    "text": {
-                        "headline": "Another Level 0 Event",
-                        "text": "Back to level 0"
-                    },
+                    "group": "Conjuntura",
                     "level": 0
+                },
+                {
+                    "start_date": { "year": "2020", "month": "4" },
+                    "text": {
+                        "headline": "Group 2 - Level 1",
+                        "text": "Conjuntura group, middle level" 
+                    },
+                    "group": "Conjuntura",
+                    "level": 1
+                },
+                {
+                    "start_date": { "year": "2020", "month": "7" },
+                    "text": {
+                        "headline": "Group 2 - Level 2",
+                        "text": "Conjuntura group, top level"
+                    },
+                    "group": "Conjuntura", 
+                    "level": 2
+                },
+                
+                // GROUP 3 - Evento
+                {
+                    "start_date": { "year": "2020", "month": "5" },
+                    "text": {
+                        "headline": "Group 3 - Level 0",
+                        "text": "Evento group, bottom level"
+                    },
+                    "group": "Evento",
+                    "level": 0
+                },
+                {
+                    "start_date": { "year": "2020", "month": "8" },
+                    "text": {
+                        "headline": "Group 3 - Level 1",
+                        "text": "Evento group, top level"
+                    },
+                    "group": "Evento",
+                    "level": 1
                 }
             ]
         };
 
         try {
-            console.log('Testing with 5 levels...');
+            console.log('Testing groups + levels...');
             var timeline = new TL.Timeline('timeline-embed', testData);
-            console.log('Success with 5 levels!');
+            console.log('Success with groups + levels!');
+            
+            // Log the timeline object to see if levels are being processed
+            console.log('Timeline object:', timeline);
+            
         } catch (error) {
-            console.error('Error with 5 levels:', error);
+            console.error('Error with groups + levels:', error);
         }
     </script>
 </body>
