@@ -232,7 +232,7 @@ export class TimeMarker {
     // ONLY set vertical position - timeline handles horizontal positioning
     this.setPosition({ 
         top: n
-        // DON'T set left here - let the timeline handle it based on dates
+        // REMOVE THIS: left: level * levelSpacing
     });
     
     this._el.timespan.style.height = remainder + "px";
