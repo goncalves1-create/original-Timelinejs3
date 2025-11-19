@@ -14,52 +14,68 @@
 
     <script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script>
     <script type="text/javascript">
-// Load data from proxy
-function loadTimelineFromProxy() {
-    const proxyUrl = 'https://goncalves1-create.github.io/original-Timelinejs3/proxy.html';
-    
-    // Create iframe to load proxy
-    const iframe = document.createElement('iframe');
-    iframe.src = proxyUrl;
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
-    
-    // Listen for data from proxy
-    window.addEventListener('message', function(event) {
-        if (event.data.type === 'sheetsData') {
-            // Process the data and create timeline
-            processSheetsData(event.data.data);
+let timeline;
+        
+        function loadTimelineFromProxy() {
+            const proxyUrl = 'proxy.html';
+            
+            const iframe = document.createElement('iframe');
+            iframe.src = proxyUrl;
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+            
+            window.addEventListener('message', function(event) {
+                if (event.data.type === 'sheetsData') {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('timeline-embed').style.display = 'block';
+                    
+                    console.log('Timeline data:', event.data.data);
+                    timeline = new TL.Timeline('timeline-embed', event.data.data, {
+                        language: "pt",
+                        start_at_end: false,
+                        zoom_level: 0,
+                        timenav_height: 100,
+                        scale_factor: 1
+                    });
+                } else if (event.data.type === 'sheetsError') {
+                    document.getElementById('loading').innerHTML = 'Error loading data: ' + event.data.error;
+                    console.error('Proxy error:', event.data.error);
+                }
+            });
+            
+            // Fallback - if no response in 10 seconds, use test data
+            setTimeout(() => {
+                if (!timeline) {
+                    document.getElementById('loading').innerHTML = 'Using fallback data...';
+                    loadFallbackData();
+                }
+            }, 10000);
         }
-    });
-}
+        
+        function loadFallbackData() {
+            const fallbackData = {
+                events: [
+                    {
+                        start_date: { year: "2020" },
+                        text: { headline: "Fallback Event", text: "Proxy timed out" },
+                        level: 1
+                    }
+                ]
+            };
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('timeline-embed').style.display = 'block';
+            timeline = new TL.Timeline('timeline-embed', fallbackData, {
+                language: "pt",
+                start_at_end: false,
+                zoom_level: 0,
+                timenav_height: 100,
+                scale_factor: 1
+            });
+        }
 
-function processSheetsData(htmlData) {
-    // You'll need to parse the HTML and convert to TimelineJS format
-    // This is a simplified version - you might need more complex parsing
-    console.log('Received data:', htmlData);
-    
-    // For now, let's create a simple test timeline
-    const testData = {
-        events: [
-            {
-                start_date: { year: "2020", month: "1" },
-                text: { headline: "Data loaded via proxy", text: "CORS issue solved!" },
-                level: 1
-            }
-        ]
-    };
-    
-    timeline = new TL.Timeline('timeline-embed', testData, {
-        language: "pt",
-        start_at_end: false,
-        zoom_level: 0,
-        timenav_height: 100,
-        scale_factor: 1
-    });
-}
-
-// Start loading
-loadTimelineFromProxy();
+        // Start loading when page loads
+        window.onload = loadTimelineFromProxy;
     </script>
 </body>
 </html>
