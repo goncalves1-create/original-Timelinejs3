@@ -14,21 +14,13 @@
 
     <script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script>
     <script type="text/javascript">
-    // Test with simple JSON data
-    var testData = {
-        "events": [
-            {
-                "start_date": { "year": "2020" },
-                "text": { "headline": "Test Event", "text": "Working?" },
-                "level": 1
-            }
-        ]
-    };
-    
-    timeline = new TL.Timeline('timeline-embed', testData, {
-        language: "pt",
-        start_at_end: false
-    });
+    timeline = new TL.Timeline('timeline-embed', 'data.json', {
+    language: "pt",
+    start_at_end: false,
+    zoom_level: 0,
+    timenav_height: 100,
+    scale_factor: 1
+});
     </script>
 </body>
 </html>
