@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Proxy</title>
+</head>
+<body>
+    <script>
+        // Fetch the Google Sheets data and pass it to parent window
+        fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vRrTFku6iNKaM_OenaASfDDwzqwxilUS-Nomtk4PcU_E3F3BExfFGVByb3EGWkVt__JUYRsBiS1oZwN/pubhtml')
+            .then(response => response.text())
+            .then(data => {
+                window.parent.postMessage({ type: 'sheetsData', data: data }, '*');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    </script>
+</body>
+</html>
