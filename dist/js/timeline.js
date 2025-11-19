@@ -13621,22 +13621,19 @@ class TimeMarker {
 	}
 
 	setRowPosition(n, remainder) {
-    // Get the level from the data if it exists
+    // Get level from data or default to 0
     var level = this.data.level || 0;
+    var levelSpacing = 120; // Horizontal spacing between levels
     
-    // Calculate horizontal offset based on level
-    var levelSpacing = 120; // Adjust this value as needed
-    var levelOffset = level * levelSpacing;
-    
-    // Set both vertical (row) and horizontal (level) positioning
+    // Set both vertical (row) and horizontal (level) position
     this.setPosition({ 
         top: n,
-        left: levelOffset 
+        left: level * levelSpacing  // <-- ADD THIS FOR LEVEL POSITIONING
     });
     
     this._el.timespan.style.height = remainder + "px";
     
-    // Add a CSS class for level-based styling
+    // Optional: Add level attribute for CSS styling
     this._el.container.setAttribute('data-level', level);
 }
 
@@ -14151,16 +14148,16 @@ class TimeNav {
         // Set Height
         this._markers[i].setHeight(marker_height);
 
-        //Position by Row AND Level
+        // Get BOTH row AND level information
         var pos_info = this.timescale.getPositionInfo(i);
         var row = pos_info.row;
-        var level = pos_info.level || 0; // GET THE LEVEL FROM TIMESCALE
+        var level = pos_info.level || 0; // <-- GET THE LEVEL
 
         var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + this.options.marker_padding;
         var remainder_height = available_height - marker_y + this.options.marker_padding;
         
-        // PASS LEVEL INFORMATION TO THE MARKER
-        this._markers[i].data.level = level; // Store level in marker data
+        // PASS LEVEL TO MARKER
+        this._markers[i].data.level = level; // <-- STORE LEVEL IN MARKER DATA
         this._markers[i].setRowPosition(marker_y, remainder_height);
     };
 }
