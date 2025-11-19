@@ -202,35 +202,6 @@ export class TimeNav {
         });
     }
 
-    _calculateMaxLevelsPerGroup() {
-        var group_levels = {};
-        var group_labels = this.timescale.getGroupLabels();
-        
-        // Initialize groups
-        for (var i = 0; i < group_labels.length; i++) {
-            group_levels[group_labels[i].label] = 0;
-        }
-        
-        // Find maximum level in each group
-        for (var i = 0; i < this._markers.length; i++) {
-            var marker = this._markers[i];
-            var group = marker.data.group || '';
-            var level = marker.data.level || 0;
-            
-            if (group_levels[group] !== undefined && level > group_levels[group]) {
-                group_levels[group] = level;
-            }
-        }
-        
-        // Convert to array in same order as group_labels
-        var result = [];
-        for (var i = 0; i < group_labels.length; i++) {
-            result.push(group_levels[group_labels[i].label] + 1); // +1 because levels are 0-based
-        }
-        
-        return result;
-    }
-    
     _updateTimeScale(new_scale) {
         this.options.scale_factor = new_scale;
         this._updateDrawTimeline();
@@ -306,22 +277,17 @@ export class TimeNav {
     _positionGroups() {
         if (this.options.has_groups) {
             var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
+                group_height = Math.floor((available_height / this.timescale.getNumberOfRows()) - this.options.marker_padding),
                 group_labels = this.timescale.getGroupLabels();
 
-            // Calculate max levels per group
-            var max_levels_per_group = this._calculateMaxLevelsPerGroup();
-            
             for (var i = 0, group_rows = 0; i < this._groups.length; i++) {
-                var group_height = Math.floor((available_height / this.timescale.getNumberOfRows()) - this.options.marker_padding);
                 var group_y = Math.floor(group_rows * (group_height + this.options.marker_padding));
                 var group_hide = false;
-                
                 if (group_y > (available_height - this.options.marker_padding)) {
                     group_hide = true;
                 }
 
-                // Pass max levels to group for proper height calculation
-                this._groups[i].setRowPosition(group_y, this._calculated_row_height + this.options.marker_padding / 2, max_levels_per_group[i] || 1);
+                this._groups[i].setRowPosition(group_y, this._calculated_row_height + this.options.marker_padding / 2);
                 this._groups[i].setAlternateRowColor(isEven(i), group_hide);
 
                 group_rows += this._groups[i].data.rows; // account for groups spanning multiple rows
@@ -394,25 +360,19 @@ export class TimeNav {
         this._calculated_row_height = this._calculateRowHeight(available_height);
 
         for (var i = 0; i < this._markers.length; i++) {
+
             // Set Height
             this._markers[i].setHeight(marker_height);
 
-            // Get position info
-            var pos_info = this.timescale.getPositionInfo(i);
-            var row = pos_info.row;
-            var level = this._markers[i].data.level || 0;
+            //Position by Row
+            var row = this.timescale.getPositionInfo(i).row;
 
-            // Calculate vertical position: group row + level offset
-            var level_offset = level * (marker_height / 3); // Adjust this divisor for spacing
-            var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + 
-                        this.options.marker_padding + level_offset;
+            var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + this.options.marker_padding;
 
             var remainder_height = available_height - marker_y + this.options.marker_padding;
             this._markers[i].setRowPosition(marker_y, remainder_height);
-            
-            // Add level data attribute for CSS targeting
-            this._markers[i]._el.container.setAttribute('data-level', level);
-        }
+        };
+
     }
 
     _resetMarkersActive() {
@@ -603,6 +563,10 @@ export class TimeNav {
         this._dispatchVisibleTicksChange();
     }
 
+    goToId(id, fast, css_animation) {
+        this.goTo(this._findMarkerIndex(id), fast, css_animation);
+    }
+
     _dispatchVisibleTicksChange() {
         /**
          * The timeout is required to wait till the end of the animation
@@ -752,7 +716,7 @@ export class TimeNav {
             this._positionEras(fast);
         }
     }
-    
+
     _updateDrawTimeline(check_update) {
         var do_update = false;
 
