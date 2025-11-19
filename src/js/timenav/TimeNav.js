@@ -351,29 +351,30 @@ export class TimeNav {
     }
 
     _assignRowsToMarkers() {
-        var available_height = this._calculateAvailableHeight(),
-            marker_height = this._calculateMarkerHeight(available_height);
+    var available_height = this._calculateAvailableHeight(),
+        marker_height = this._calculateMarkerHeight(available_height);
 
+    this._positionGroups();
 
-        this._positionGroups();
+    this._calculated_row_height = this._calculateRowHeight(available_height);
 
-        this._calculated_row_height = this._calculateRowHeight(available_height);
+    for (var i = 0; i < this._markers.length; i++) {
+        // Set Height
+        this._markers[i].setHeight(marker_height);
 
-        for (var i = 0; i < this._markers.length; i++) {
+        //Position by Row AND Level
+        var pos_info = this.timescale.getPositionInfo(i);
+        var row = pos_info.row;
+        var level = pos_info.level || 0; // GET THE LEVEL FROM TIMESCALE
 
-            // Set Height
-            this._markers[i].setHeight(marker_height);
-
-            //Position by Row
-            var row = this.timescale.getPositionInfo(i).row;
-
-            var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + this.options.marker_padding;
-
-            var remainder_height = available_height - marker_y + this.options.marker_padding;
-            this._markers[i].setRowPosition(marker_y, remainder_height);
-        };
-
-    }
+        var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + this.options.marker_padding;
+        var remainder_height = available_height - marker_y + this.options.marker_padding;
+        
+        // PASS LEVEL INFORMATION TO THE MARKER
+        this._markers[i].data.level = level; // Store level in marker data
+        this._markers[i].setRowPosition(marker_y, remainder_height);
+    };
+}
 
     _resetMarkersActive() {
         for (var i = 0; i < this._markers.length; i++) {
