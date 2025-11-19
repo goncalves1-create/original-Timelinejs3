@@ -228,17 +228,14 @@ export class TimeMarker {
 	setRowPosition(n, remainder) {
     // Get level from data or default to 0
     var level = this.data.level || 0;
-    var levelSpacing = 120; // Horizontal spacing between levels
     
-    // Set both vertical (row) and horizontal (level) position
+    // ONLY set vertical position - timeline handles horizontal positioning
     this.setPosition({ 
-        top: n,
-        left: level * levelSpacing  // <-- ADD THIS FOR LEVEL POSITIONING
+        top: n
+        // DON'T set left here - let the timeline handle it based on dates
     });
     
     this._el.timespan.style.height = remainder + "px";
-    
-    // Optional: Add level attribute for CSS styling
     this._el.container.setAttribute('data-level', level);
 }
 
