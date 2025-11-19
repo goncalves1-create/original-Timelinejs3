@@ -29,7 +29,8 @@ export class TimeScale {
 
         var slides = timeline_config.events;
         this._scale = timeline_config.scale;
-
+        this._slides = slides; // STORE SLIDES REFERENCE FOR LEVEL ACCESS
+        
         options = mergeData({ // establish defaults
             display_width: 500,
             screen_multiplier: 3,
@@ -169,53 +170,44 @@ export class TimeScale {
         @positions = list of objects from this._positions
         @rows_left = number of rows available (assume > 0)
     */
-    _computeRowInfo(positions, rows_left) {
-        var lasts_in_row = [];
-        var n_overlaps = 0;
 
-        for (var i = 0; i < positions.length; i++) {
-            var pos_info = positions[i];
-            var overlaps = [];
-
-            // See if we can add item to an existing row without
-            // overlapping the previous item in that row
-            delete pos_info.row;
-
-            for (var j = 0; j < lasts_in_row.length; j++) {
-                overlaps.push(lasts_in_row[j].end - pos_info.start);
-                if (overlaps[j] <= 0) {
-                    pos_info.row = j;
-                    lasts_in_row[j] = pos_info;
-                    break;
-                }
-            }
-
-            // If we couldn't add to an existing row without overlap...
-            if (typeof(pos_info.row) == 'undefined') {
-                if (rows_left === null) {
-                    // Make a new row
-                    pos_info.row = lasts_in_row.length;
-                    lasts_in_row.push(pos_info);
-                } else if (rows_left > 0) {
-                    // Make a new row
-                    pos_info.row = lasts_in_row.length;
-                    lasts_in_row.push(pos_info);
-                    rows_left--;
-                } else {
-                    // Add to existing row with minimum overlap.
-                    var min_overlap = Math.min.apply(null, overlaps);
-                    var idx = overlaps.indexOf(min_overlap);
-                    pos_info.row = idx;
-                    if (pos_info.end > lasts_in_row[idx].end) {
-                        lasts_in_row[idx] = pos_info;
-                    }
-                    n_overlaps++;
-                }
-            }
+    _findSlideByPosition(position_info) {
+    // Find the slide that corresponds to this position info
+    // This assumes we have access to the slides array
+    for (var i = 0; i < this._slides.length; i++) {
+        var slide_pos = this.getPosition(this._slides[i].start_date.getTime());
+        if (Math.abs(slide_pos - position_info.start) < 1) { // Fuzzy match
+            return this._slides[i];
         }
-
-        return { n_rows: lasts_in_row.length, n_overlaps: n_overlaps };
     }
+    return null;
+}
+    
+    _computeRowInfo(positions, rows_left) {
+    // USE MANUAL LEVELS FROM GOOGLE SHEETS INSTEAD OF AUTOMATIC CALCULATION
+    for (var i = 0; i < positions.length; i++) {
+        var pos_info = positions[i];
+        var slide = this._findSlideByPosition(pos_info); // We need to get the slide data
+        
+        // Use manual level from Google Sheets data
+        // If no level specified, default to 0
+        pos_info.row = (slide && slide.data.level !== undefined) ? slide.data.level : 0;
+        
+        // Ensure row doesn't exceed available rows
+        if (rows_left !== null && pos_info.row >= rows_left) {
+            pos_info.row = rows_left - 1;
+        }
+    }
+
+    // Calculate actual number of rows used
+    var used_rows = {};
+    for (var i = 0; i < positions.length; i++) {
+        used_rows[positions[i].row] = true;
+    }
+    var n_rows = Object.keys(used_rows).length;
+
+    return { n_rows: n_rows, n_overlaps: 0 }; // No overlaps with manual levels
+}
 
     /*  Compute marker positions.  If using groups, this._number_of_rows
         will never be less than the number of groups.
