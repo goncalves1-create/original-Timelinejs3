@@ -269,10 +269,11 @@ _computeRowInfo(positions, rows_left, group_index = null) {
 
         // Set start/end/width; enumerate groups
         for (var i = 0; i < slides.length; i++) {
-            var pos_info = {
-                start: this.getPosition(slides[i].start_date.getTime())
-            };
-            this._positions.push(pos_info);
+        var pos_info = {
+        start: this.getPosition(slides[i].start_date.getTime()),
+        start_date_millis: slides[i].start_date.getTime() // STORE FOR LEVEL LOOKUP
+        };
+        this._positions.push(pos_info);
 
             if (typeof(slides[i].end_date) != 'undefined') {
                 var end_pos = this.getPosition(slides[i].end_date.getTime());
@@ -361,10 +362,10 @@ _computeRowInfo(positions, rows_left, group_index = null) {
                     var gi = group_info[i];
 
                     if (gi.n_overlaps && rows_left) {
-                        var res = this._computeRowInfo(gi.positions, gi.n_rows + 1);
-                        gi.n_rows = res.n_rows; // update group info
-                        gi.n_overlaps = res.n_overlaps;
-                        rows_left--; // update rows left
+                    var res = this._computeRowInfo(gi.positions, gi.n_rows + 1, gi.idx);
+                    gi.n_rows = res.n_rows; // update group info
+                    gi.n_overlaps = res.n_overlaps;
+                    rows_left--; // update rows left
                     }
 
                     n_rows += gi.n_rows; // update rows used
