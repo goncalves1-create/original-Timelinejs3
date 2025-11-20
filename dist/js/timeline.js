@@ -14087,11 +14087,16 @@ class TimeNav {
                 group_hide = true;
             }
 
-            // Position the group to span all its rows
+            // Position the group
             this._groups[i].setRowPosition(group_y, group_height);
             this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
 
-            // Move to next group position
+            // FORCE FULL WIDTH - Make groups span entire timeline width
+            var group_element = this._groups[i]._el.container;
+            group_element.style.width = "100%";
+            group_element.style.left = "0px";
+            group_element.style.right = "0px";
+
             current_row_offset += group_rows;
         }
     }
