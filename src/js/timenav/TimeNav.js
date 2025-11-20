@@ -308,46 +308,21 @@ export class TimeNav {
     _positionGroups() {
     if (this.options.has_groups) {
         var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
+            group_height = Math.floor((available_height / this.timescale.getNumberOfRows()) - this.options.marker_padding),
             group_labels = this.timescale.getGroupLabels();
 
-        // Calculate total rows needed by all groups
-        var total_group_rows = 0;
-        for (var i = 0; i < group_labels.length; i++) {
-            total_group_rows += group_labels[i].rows;
-        }
-        
-        // Calculate individual group height based on its row count
-        var group_height_per_row = Math.floor(available_height / total_group_rows) - this.options.marker_padding;
-
-        // GET THE ACTUAL TIMELINE WIDTH
-        var timelineWidth = this.timescale.getPixelWidth();
-
-        var current_row_offset = 0;
-        
-        for (var i = 0; i < this._groups.length; i++) {
-            var group_rows = group_labels[i].rows;
-            var group_height = group_height_per_row * group_rows;
-            var group_y = Math.floor(current_row_offset * (group_height_per_row + this.options.marker_padding));
-            
+        for (var i = 0, group_rows = 0; i < this._groups.length; i++) {
+            var group_y = Math.floor(group_rows * (group_height + this.options.marker_padding));
             var group_hide = false;
             if (group_y > (available_height - this.options.marker_padding)) {
                 group_hide = true;
             }
 
-            // Position the group
-            this._groups[i].setRowPosition(group_y, group_height);
+            // REVERT TO ORIGINAL GROUP POSITIONING
+            this._groups[i].setRowPosition(group_y, this._calculated_row_height + this.options.marker_padding / 2);
             this._groups[i].setAlternateRowColor(isEven(i), group_hide);
 
-            // SET GROUPS TO ACTUAL TIMELINE WIDTH (not 100%)
-            var group_element = this._groups[i]._el.container;
-            group_element.style.width = timelineWidth + "px";
-            group_element.style.left = "0px";
-            // ADD THESE LINES RIGHT HERE:
-            // MAKE ABSOLUTELY SURE GROUPS DON'T INTERFERE
-            group_element.style.pointerEvents = "none";
-            group_element.style.zIndex = "1"; // Put them behind interactive elements
-
-            current_row_offset += group_rows;
+            group_rows += this._groups[i].data.rows;
         }
     }
 }
