@@ -232,26 +232,31 @@ export class TimeNav {
     }
 
     setZoomFactor(factor) {
-        if (factor <= this.options.zoom_sequence[0]) {
-            this.fire("zoomtoggle", { zoom: "out", show: false });
-        } else {
-            this.fire("zoomtoggle", { zoom: "out", show: true });
-        }
-
-        if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
-            this.fire("zoomtoggle", { zoom: "in", show: false });
-        } else {
-            this.fire("zoomtoggle", { zoom: "in", show: true });
-        }
-
-        if (factor == 0) {
-            console.warn("Zoom factor must be greater than zero. Using 0.1");
-            factor = 0.1;
-        }
-        this.options.scale_factor = factor;
-        //this._updateDrawTimeline(true);
-        this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
+    if (factor <= this.options.zoom_sequence[0]) {
+        this.fire("zoomtoggle", { zoom: "out", show: false });
+    } else {
+        this.fire("zoomtoggle", { zoom: "out", show: true });
     }
+
+    if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
+        this.fire("zoomtoggle", { zoom: "in", show: false });
+    } else {
+        this.fire("zoomtoggle", { zoom: "in", show: true });
+    }
+
+    if (factor == 0) {
+        console.warn("Zoom factor must be greater than zero. Using 0.1");
+        factor = 0.1;
+    }
+    this.options.scale_factor = factor;
+    
+    // FORCE COMPLETE REDRAW ON ZOOM
+    this.timescale = this._getTimeScale();
+    this._drawTimeline(true);
+    this.updateDisplay();
+    
+    this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
+}
 
     /*	Groups
     ================================================== */
