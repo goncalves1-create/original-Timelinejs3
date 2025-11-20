@@ -268,11 +268,6 @@ export class TimeScale {
 
     // ADD THE NEW METHOD RIGHT HERE:
 _computeRowInfoForGroup(positions, group_slides, rows_left, group_index = null) {
-      console.log("=== _computeRowInfoForGroup called ===");
-    console.log("positions count:", positions.length);
-    console.log("group_slides count:", group_slides.length);
-    console.log("group_slides:", group_slides);
-    
     
     var lasts_in_row = [];
     var n_overlaps = 0;
@@ -486,10 +481,6 @@ _computePositionInfo(slides, max_rows, default_marker_width) {
                 if (gi.n_overlaps && rows_left) {
                     var res = this._computeRowInfoForGroup(gi.positions, gi.slides, gi.n_rows + 1, gi.idx);
                     // ADD THESE DEBUG LINES:
-        console.log("Group", gi.idx, "label:", gi.label);
-        console.log("Group", gi.idx, "slides count:", gi.slides.length);
-        console.log("Group", gi.idx, "positions count:", gi.positions.length);
-        console.log("Group", gi.idx, "result rows:", res.n_rows);
                     
                     gi.n_rows = res.n_rows; // update group info
                     gi.n_overlaps = res.n_overlaps;
