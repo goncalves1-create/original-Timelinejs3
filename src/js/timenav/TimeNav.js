@@ -314,6 +314,7 @@ export class TimeNav {
 
             // SET GROUPS TO ACTUAL TIMELINE WIDTH (not 100%)
             var group_element = this._groups[i]._el.container;
+            console.log("Setting group width to:", timelineWidth, "px");
             group_element.style.width = timelineWidth + "px";
             group_element.style.left = "0px";
 
