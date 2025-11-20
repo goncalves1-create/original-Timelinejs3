@@ -14058,25 +14058,40 @@ class TimeNav {
     }
 
     _positionGroups() {
-        if (this.options.has_groups) {
-            var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
-                group_height = Math.floor((available_height / this.timescale.getNumberOfRows()) - this.options.marker_padding),
-                group_labels = this.timescale.getGroupLabels();
+    if (this.options.has_groups) {
+        var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
+            group_labels = this.timescale.getGroupLabels();
 
-            for (var i = 0, group_rows = 0; i < this._groups.length; i++) {
-                var group_y = Math.floor(group_rows * (group_height + this.options.marker_padding));
-                var group_hide = false;
-                if (group_y > (available_height - this.options.marker_padding)) {
-                    group_hide = true;
-                }
+        // Calculate total rows needed by all groups
+        var total_group_rows = 0;
+        for (var i = 0; i < group_labels.length; i++) {
+            total_group_rows += group_labels[i].rows;
+        }
+        
+        // Calculate individual group height based on its row count
+        var group_height_per_row = Math.floor(available_height / total_group_rows) - this.options.marker_padding;
 
-                this._groups[i].setRowPosition(group_y, this._calculated_row_height + this.options.marker_padding / 2);
-                this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
-
-                group_rows += this._groups[i].data.rows; // account for groups spanning multiple rows
+        var current_row_offset = 0;
+        
+        for (var i = 0; i < this._groups.length; i++) {
+            var group_rows = group_labels[i].rows;
+            var group_height = group_height_per_row * group_rows;
+            var group_y = Math.floor(current_row_offset * (group_height_per_row + this.options.marker_padding));
+            
+            var group_hide = false;
+            if (group_y > (available_height - this.options.marker_padding)) {
+                group_hide = true;
             }
+
+            // Position the group to span all its rows
+            this._groups[i].setRowPosition(group_y, group_height);
+            this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
+
+            // Move to next group position
+            current_row_offset += group_rows;
         }
     }
+}
 
     /*	Markers
     ================================================== */
