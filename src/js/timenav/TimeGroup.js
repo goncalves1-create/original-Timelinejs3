@@ -52,6 +52,7 @@ export class TimeGroup {
 	}
 	
 	setRowPosition(n, h) {
+    console.log("TimeGroup setRowPosition called, current width:", this._el.container.style.width);
     this.options.height = h * this.data.rows;
     this.setPosition({top:n});
     this._el.container.style.height = this.options.height + "px";
