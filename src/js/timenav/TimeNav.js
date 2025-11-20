@@ -293,6 +293,9 @@ export class TimeNav {
         // Calculate individual group height based on its row count
         var group_height_per_row = Math.floor(available_height / total_group_rows) - this.options.marker_padding;
 
+        // GET THE ACTUAL TIMELINE WIDTH
+        var timelineWidth = this.timescale.getPixelWidth();
+
         var current_row_offset = 0;
         
         for (var i = 0; i < this._groups.length; i++) {
@@ -309,11 +312,10 @@ export class TimeNav {
             this._groups[i].setRowPosition(group_y, group_height);
             this._groups[i].setAlternateRowColor(isEven(i), group_hide);
 
-            // FORCE FULL WIDTH - Make groups span entire timeline width
+            // SET GROUPS TO ACTUAL TIMELINE WIDTH (not 100%)
             var group_element = this._groups[i]._el.container;
-            group_element.style.width = "100%";
+            group_element.style.width = timelineWidth + "px";
             group_element.style.left = "0px";
-            group_element.style.right = "0px";
 
             current_row_offset += group_rows;
         }
