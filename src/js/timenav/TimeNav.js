@@ -163,10 +163,23 @@ export class TimeNav {
     this._el.slider.style.width = this.timescale.getPixelWidth() + "px";
     this._el.marker_container.style.width = this.timescale.getPixelWidth() + "px";
 
+    // DEBUG: Check what's happening with widths
+    console.log("=== DEBUG updateDisplay ===");
+    console.log("timelineWidth:", this.timescale.getPixelWidth());
+    console.log("visibleWidth:", this.options.width);
+    console.log("slider width:", this._el.slider.style.width);
+    console.log("slider background width:", this._el.slider_background.style.width);
+    console.log("marker container width:", this._el.marker_container.style.width);
+        
     // Update Swipable constraint with PROPER calculation
     var timelineWidth = this.timescale.getPixelWidth();
     var visibleWidth = this.options.width;
-    
+
+
+    console.log("rightConstraint:", rightConstraint);
+    console.log("=======================");
+
+        
     // Allow some extra space to ensure last marker is reachable
     var extraSpace = 100; // pixels of extra scroll space
     var rightConstraint = Math.min(0, -(timelineWidth - visibleWidth + extraSpace));
@@ -235,7 +248,7 @@ export class TimeNav {
         if (typeof(zoom_factor) == 'number') {
             this.setZoomFactor(zoom_factor);
         } else {
-            console.warn("Invalid zoom level 7. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
+            console.warn("Invalid zoom level 1. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
         }
     }
 
@@ -327,9 +340,12 @@ export class TimeNav {
 
             // SET GROUPS TO ACTUAL TIMELINE WIDTH (not 100%)
             var group_element = this._groups[i]._el.container;
-            console.log("Setting group width to:", timelineWidth, "px");
             group_element.style.width = timelineWidth + "px";
             group_element.style.left = "0px";
+            // ADD THESE LINES RIGHT HERE:
+            // MAKE ABSOLUTELY SURE GROUPS DON'T INTERFERE
+            group_element.style.pointerEvents = "none";
+            group_element.style.zIndex = "1"; // Put them behind interactive elements
 
             current_row_offset += group_rows;
         }
