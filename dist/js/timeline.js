@@ -13320,11 +13320,10 @@ class TimeGroup {
     this.setPosition({top:n});
     this._el.container.style.height = this.options.height + "px";
     
-    // ADD LEVEL AWARENESS - groups need to span the full width of all levels
-    var totalLevels = 6; // You'll need to get this from somewhere, maybe pass it as parameter
-    var levelSpacing = 120;
-    this._el.container.style.width = (totalLevels * levelSpacing) + "px";
-    this._el.container.style.left = "0px"; // Ensure groups start at left edge
+    // MAKE GROUPS SPAN FULL TIMELINE WIDTH
+    // We need to get the actual timeline width - for now use 100% as a quick fix
+    this._el.container.style.width = "100%";
+    this._el.container.style.left = "0px";
 }
 	
 	setAlternateRowColor(alternate, hide) {
