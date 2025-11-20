@@ -142,42 +142,48 @@ export class TimeNav {
     /*	Update Display
     ================================================== */
     updateDisplay(width, height, animate) {
-        let reposition_markers = false;
-        if (width) {
-            if (this.options.width == 0 && width > 0) {
-                reposition_markers = true;
-            }
-            this.options.width = width;
+    let reposition_markers = false;
+    if (width) {
+        if (this.options.width == 0 && width > 0) {
+            reposition_markers = true;
         }
-        if (height && height != this.options.height) {
-            this.options.height = height;
-            this.timescale = this._getTimeScale();
-        }
+        this.options.width = width;
+    }
+    if (height && height != this.options.height) {
+        this.options.height = height;
+        this.timescale = this._getTimeScale();
+    }
 
-        // Size Markers
-        this._assignRowsToMarkers();
-        
-        // Size swipable area
-        this._el.slider_background.style.width = this.timescale.getPixelWidth() + "px";
-        this._el.slider_background.style.left = "0px";
-        this._el.slider.style.width = this.timescale.getPixelWidth() + "px";
+    // Size Markers
+    this._assignRowsToMarkers();
 
-        // Update Swipable constraint with proper calculations
-        var timelineWidth = this.timescale.getPixelWidth();
-        var visibleWidth = this.options.width;
-        this._swipable.updateConstraint({ 
+    // Size swipable area
+    this._el.slider_background.style.width = this.timescale.getPixelWidth() + "px";
+    this._el.slider_background.style.left = "0px";
+    this._el.slider.style.width = this.timescale.getPixelWidth() + "px";
+    this._el.marker_container.style.width = this.timescale.getPixelWidth() + "px";
+
+    // Update Swipable constraint with PROPER calculation
+    var timelineWidth = this.timescale.getPixelWidth();
+    var visibleWidth = this.options.width;
+    
+    // Allow some extra space to ensure last marker is reachable
+    var extraSpace = 100; // pixels of extra scroll space
+    var rightConstraint = Math.min(0, -(timelineWidth - visibleWidth + extraSpace));
+    
+    this._swipable.updateConstraint({ 
         top: false, 
         bottom: false, 
         left: 0, 
-        right: -(timelineWidth - visibleWidth)
+        right: rightConstraint
     });
-        
-        if (reposition_markers) {
-            this._drawTimeline()
-        }
-        // Go to the current slide
-        this.goToId(this.current_id, true);
+
+    if (reposition_markers) {
+        this._drawTimeline()
     }
+    // Go to the current slide
+    this.goToId(this.current_id, true);
+}
 
 
     /*	TimeScale
@@ -229,7 +235,7 @@ export class TimeNav {
         if (typeof(zoom_factor) == 'number') {
             this.setZoomFactor(zoom_factor);
         } else {
-            console.warn("Invalid zoom level 1111. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
+            console.warn("Invalid zoom level 7. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
         }
     }
 
