@@ -14884,6 +14884,105 @@ class TimeScale {
     return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
 }
 
+    // ADD THE NEW METHOD RIGHT HERE:
+_computeRowInfoForGroup(positions, group_slides, rows_left, group_index = null) {
+    var lasts_in_row = [];
+    var n_overlaps = 0;
+    
+    // STEP 1: Find manual levels within this group's slides
+    var max_manual_level = -1;
+    for (var i = 0; i < positions.length; i++) {
+        var current_slide = group_slides[i];
+        if (current_slide && current_slide.level !== undefined && current_slide.level !== null) {
+            var manual_level = parseInt(current_slide.level);
+            if (!isNaN(manual_level) && manual_level > max_manual_level) {
+                max_manual_level = manual_level;
+            }
+        }
+    }
+    
+    // STEP 2: Pre-create levels for manual assignments
+    var total_levels_needed = Math.max(max_manual_level + 1, 0);
+    for (var l = 0; l < total_levels_needed; l++) {
+        lasts_in_row.push(null);
+    }
+
+    // STEP 3: Process each event in this group
+    for (var i = 0; i < positions.length; i++) {
+        var pos_info = positions[i];
+        var current_slide = group_slides[i]; // Use group-specific slide
+
+        // Handle manual level assignment
+        if (current_slide && current_slide.level !== undefined && current_slide.level !== null) {
+            var manual_level = parseInt(current_slide.level);
+            
+            if (!isNaN(manual_level) && manual_level >= 0) {
+                // Ensure the manual level exists (create if needed)
+                while (lasts_in_row.length <= manual_level) {
+                    lasts_in_row.push(null);
+                }
+                
+                // Check if we can place this event in the requested level without overlapping
+                var can_use_manual_level = true;
+                if (lasts_in_row[manual_level] !== null) {
+                    // Check if this event overlaps with the last event in this level
+                    var last_event = lasts_in_row[manual_level];
+                    if (pos_info.start < last_event.end) {
+                        // They overlap - cannot use manual level
+                        can_use_manual_level = false;
+                    }
+                }
+                
+                if (can_use_manual_level) {
+                    pos_info.row = manual_level;
+                    pos_info.level = manual_level;
+                    lasts_in_row[manual_level] = pos_info;
+                    continue; // Skip automatic layout
+                }
+                // If manual level is occupied, fall through to automatic layout
+            }
+        }
+
+        // Automatic layout for events without manual levels or with occupied manual levels
+        delete pos_info.row;
+        var overlaps = [];
+
+        for (var j = 0; j < lasts_in_row.length; j++) {
+            overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
+            if(overlaps[j] <= 0) {
+                pos_info.row = j;
+                pos_info.level = j; // Store level for rendering
+                lasts_in_row[j] = pos_info;
+                break;
+            }
+        }
+
+        if (typeof(pos_info.row) == 'undefined') {
+            if (rows_left === null) {
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
+            } else if (rows_left > 0) {
+                pos_info.row = lasts_in_row.length;
+                pos_info.level = lasts_in_row.length;
+                lasts_in_row.push(pos_info);
+                rows_left--;
+            } else {
+                var min_overlap = Math.min.apply(null, overlaps);
+                var idx = overlaps.indexOf(min_overlap);
+                pos_info.row = idx;
+                pos_info.level = idx;
+                if (pos_info.end > lasts_in_row[idx].end) {
+                    lasts_in_row[idx] = pos_info;
+                }
+                n_overlaps++;
+            }
+        }
+    }
+
+    return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
+}
+
     /*  Compute marker positions */
     _computePositionInfo(slides, max_rows, default_marker_width) {
         default_marker_width = default_marker_width || 100;
@@ -14943,6 +15042,7 @@ class TimeScale {
                     label: groups[i],
                     idx: i,
                     positions: [],
+                    slides: [], // ADD THIS LINE FOR SLIDES STORAGE
                     n_rows: 1, // default
                     n_overlaps: 0
                 };
@@ -14950,18 +15050,21 @@ class TimeScale {
 
             for (var i = 0; i < this._positions.length; i++) {
                 var pos_info = this._positions[i];
+                var slide_index = pos_info.slide_index;
+                var group_index = groups.indexOf(slides[slide_index].group || "");
 
-                pos_info.group = groups.indexOf(slides[i].group || "");
+                pos_info.group = group_index;
                 pos_info.row = 0;
 
-                var gi = group_info[pos_info.group];
+                var gi = group_info[group_index];
+                gi.positions.push(pos_info);
+                gi.slides.push(slides[slide_index]); // ADD THIS LINE - STORE SLIDE
+
                 for (var j = gi.positions.length - 1; j >= 0; j--) {
                     if (gi.positions[j].end > pos_info.start) {
                         gi.n_overlaps++;
                     }
                 }
-
-                gi.positions.push(pos_info);
             }
 
             var n_rows = groups.length; // start with 1 row per group
@@ -14992,7 +15095,7 @@ class TimeScale {
                     var gi = group_info[i];
 
                     if (gi.n_overlaps && rows_left) {
-                        var res = this._computeRowInfo(gi.positions, gi.n_rows + 1, gi.idx);
+                        var res = this._computeRowInfoForGroup(gi.positions, gi.slides, gi.n_rows + 1, gi.idx);
                         gi.n_rows = res.n_rows; // update group info
                         gi.n_overlaps = res.n_overlaps;
                         rows_left--; // update rows left
