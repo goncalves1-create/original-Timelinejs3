@@ -82,14 +82,16 @@ export class TimeGroup {
 	
 	/*	Private Methods
 	================================================== */
-	_initLayout () {
-		
-		// Create Layout
-		this._el.message = DOM.create("div", "tl-timegroup-message", this._el.container);
-		this._el.message.innerHTML = this.data.label;
-		
-		
-	}
+	_initLayout() {
+    // Create Layout
+    this._el.container = DOM.create("div", "tl-timegroup");
+    
+    // MAKE GROUP NON-INTERACTIVE
+    this._el.container.style.pointerEvents = "none";
+    
+    this._el.message = DOM.create("div", "tl-timegroup-message", this._el.container);
+    this._el.message.innerHTML = this.data.label;
+    }
 	
 	_initEvents () {
 		DOMEvent.addListener(this._el.container, 'click', this._onMouseClick, this);
