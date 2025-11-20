@@ -55,11 +55,8 @@ export class TimeGroup {
     this.options.height = h * this.data.rows;
     this.setPosition({top:n});
     this._el.container.style.height = this.options.height + "px";
-    
-    // MAKE GROUPS SPAN FULL TIMELINE WIDTH
-    // We need to get the actual timeline width - for now use 100% as a quick fix
-    this._el.container.style.width = "100%";
     this._el.container.style.left = "0px";
+    // REMOVE the width calculation - let TimeNav.js set the width
 }
 	
 	setAlternateRowColor(alternate, hide) {
