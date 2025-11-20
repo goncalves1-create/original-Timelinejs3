@@ -13944,13 +13944,15 @@ class TimeNav {
         this._el.slider_background.style.left = "0px";
         this._el.slider.style.width = this.timescale.getPixelWidth() + "px";
 
-        // Update Swipable constraint
+        // Update Swipable constraint with proper calculations
+        var timelineWidth = this.timescale.getPixelWidth();
+        var visibleWidth = this.options.width;
         this._swipable.updateConstraint({ 
         top: false, 
         bottom: false, 
         left: 0, 
-        right: -this.timescale.getPixelWidth() + this.options.width 
-        });
+        right: -(timelineWidth - visibleWidth)
+    });
         
         if (reposition_markers) {
             this._drawTimeline()
@@ -14009,31 +14011,36 @@ class TimeNav {
         if (typeof(zoom_factor) == 'number') {
             this.setZoomFactor(zoom_factor);
         } else {
-            console.warn("Invalid zoom level. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
+            console.warn("Invalid zoom level 1111. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
         }
     }
 
     setZoomFactor(factor) {
-        if (factor <= this.options.zoom_sequence[0]) {
-            this.fire("zoomtoggle", { zoom: "out", show: false });
-        } else {
-            this.fire("zoomtoggle", { zoom: "out", show: true });
-        }
-
-        if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
-            this.fire("zoomtoggle", { zoom: "in", show: false });
-        } else {
-            this.fire("zoomtoggle", { zoom: "in", show: true });
-        }
-
-        if (factor == 0) {
-            console.warn("Zoom factor must be greater than zero. Using 0.1");
-            factor = 0.1;
-        }
-        this.options.scale_factor = factor;
-        //this._updateDrawTimeline(true);
-        this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
+    if (factor <= this.options.zoom_sequence[0]) {
+        this.fire("zoomtoggle", { zoom: "out", show: false });
+    } else {
+        this.fire("zoomtoggle", { zoom: "out", show: true });
     }
+
+    if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
+        this.fire("zoomtoggle", { zoom: "in", show: false });
+    } else {
+        this.fire("zoomtoggle", { zoom: "in", show: true });
+    }
+
+    if (factor == 0) {
+        console.warn("Zoom factor must be greater than zero. Using 0.1");
+        factor = 0.1;
+    }
+    this.options.scale_factor = factor;
+    
+    // FORCE COMPLETE REDRAW ON ZOOM
+    this.timescale = this._getTimeScale();
+    this._drawTimeline(true);
+    this.updateDisplay();
+    
+    this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
+}
 
     /*	Groups
     ================================================== */
