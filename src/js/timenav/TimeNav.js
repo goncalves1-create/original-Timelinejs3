@@ -162,6 +162,9 @@ export class TimeNav {
     this._el.slider_background.style.left = -(this.options.width / 2) + "px";
     this._el.slider.style.width = this.timescale.getPixelWidth() + this.options.width + "px";
 
+    console.log("rightConstraint:", rightConstraint);
+    console.log("=======================");
+        
     // Update Swipable constraint
     this._swipable.updateConstraint({ top: false, bottom: false, left: (this.options.width / 2), right: -(this.timescale.getPixelWidth() - (this.options.width / 2)) });
 
