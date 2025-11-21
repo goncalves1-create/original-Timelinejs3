@@ -52,10 +52,12 @@ export class TimeGroup {
 	}
 	
 	setRowPosition(n, h) {
+    console.log("TimeGroup setRowPosition called, current width:", this._el.container.style.width);
     this.options.height = h * this.data.rows;
     this.setPosition({top:n});
     this._el.container.style.height = this.options.height + "px";
-    // REMOVE all the width manipulation - let it use default CSS
+    this._el.container.style.left = "0px";
+    // REMOVE the width calculation - let TimeNav.js set the width
 }
 	
 	setAlternateRowColor(alternate, hide) {
