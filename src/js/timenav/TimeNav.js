@@ -142,7 +142,7 @@ export class TimeNav {
     /*	Update Display
     ================================================== */
     updateDisplay(width, height, animate) {
-        console.log("=== updateDisplay DEBUG 123 ===");
+        console.log("=== updateDisplay DEBUG 3 ===");
     console.log("options.width:", this.options.width);
     console.log("options.height:", this.options.height);
     console.log("timelineWidth:", this.timescale.getPixelWidth());
