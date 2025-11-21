@@ -13946,7 +13946,7 @@ class TimeNav {
     this._el.marker_container.style.width = this.timescale.getPixelWidth() + "px";
 
     // DEBUG: Check what's happening with widths
-    console.log("=== DEBUG updateDisplay ===");
+    console.log("=== DEBUG updateDisplay 1 ===");
     console.log("timelineWidth:", this.timescale.getPixelWidth());
     console.log("visibleWidth:", this.options.width);
     console.log("slider width:", this._el.slider.style.width);
