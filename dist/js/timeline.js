@@ -13315,13 +13315,18 @@ class TimeGroup {
 		
 	}
 	
-	setRowPosition(n, h) {
-    console.log("TimeGroup setRowPosition called, current width:", this._el.container.style.width);
-    this.options.height = h * this.data.rows;
+	setRowPosition(n, h, max_levels = 1) {
+    // Calculate height based on levels instead of just rows
+    var level_height = h; // Height per level
+    var total_height = level_height * max_levels;
+
+        console.log("TimeGroup.setRowPosition - top:", n, "height:", h);
+    console.log("Current group width:", this._el.container.style.width);
+    console.log("Current group position:", this._el.container.style.top, this._el.container.style.left);
+        
+    this.options.height = total_height;
     this.setPosition({top:n});
     this._el.container.style.height = this.options.height + "px";
-    this._el.container.style.left = "0px";
-    // REMOVE the width calculation - let TimeNav.js set the width
 }
 	
 	setAlternateRowColor(alternate, hide) {
@@ -13346,16 +13351,14 @@ class TimeGroup {
 	
 	/*	Private Methods
 	================================================== */
-	_initLayout() {
-    // Create Layout
-    this._el.container = _dom_DOM__WEBPACK_IMPORTED_MODULE_4__.create("div", "tl-timegroup");
-    
-    // MAKE GROUP NON-INTERACTIVE
-    this._el.container.style.pointerEvents = "none";
-    
-    this._el.message = _dom_DOM__WEBPACK_IMPORTED_MODULE_4__.create("div", "tl-timegroup-message", this._el.container);
-    this._el.message.innerHTML = this.data.label;
-    }
+	_initLayout () {
+		
+		// Create Layout
+		this._el.message = _dom_DOM__WEBPACK_IMPORTED_MODULE_4__.create("div", "tl-timegroup-message", this._el.container);
+		this._el.message.innerHTML = this.data.label;
+		
+		
+	}
 	
 	_initEvents () {
 		_dom_DOMEvent__WEBPACK_IMPORTED_MODULE_3__.DOMEvent.addListener(this._el.container, 'click', this._onMouseClick, this);
@@ -13924,61 +13927,40 @@ class TimeNav {
     /*	Update Display
     ================================================== */
     updateDisplay(width, height, animate) {
-    let reposition_markers = false;
-    if (width) {
-        if (this.options.width == 0 && width > 0) {
-            reposition_markers = true;
-        }
-        this.options.width = width;
-    }
-    if (height && height != this.options.height) {
-        this.options.height = height;
-        this.timescale = this._getTimeScale();
-    }
-
-    // Size Markers
-    this._assignRowsToMarkers();
-
-    // Size swipable area
-    this._el.slider_background.style.width = this.timescale.getPixelWidth() + "px";
-    this._el.slider_background.style.left = "0px";
-    this._el.slider.style.width = this.timescale.getPixelWidth() + "px";
-    this._el.marker_container.style.width = this.timescale.getPixelWidth() + "px";
-
-    // DEBUG: Check what's happening with widths
-    console.log("=== DEBUG updateDisplay 1 ===");
+        console.log("=== updateDisplay DEBUG ===");
+    console.log("options.width:", this.options.width);
+    console.log("options.height:", this.options.height);
     console.log("timelineWidth:", this.timescale.getPixelWidth());
-    console.log("visibleWidth:", this.options.width);
-    console.log("slider width:", this._el.slider.style.width);
-    console.log("slider background width:", this._el.slider_background.style.width);
-    console.log("marker container width:", this._el.marker_container.style.width);
         
-    // Update Swipable constraint with PROPER calculation
-    var timelineWidth = this.timescale.getPixelWidth();
-    var visibleWidth = this.options.width;
+        let reposition_markers = false;
+        if (width) {
+            if (this.options.width == 0 && width > 0) {
+                reposition_markers = true;
+            }
+            this.options.width = width;
+        }
+        if (height && height != this.options.height) {
+            this.options.height = height;
+            this.timescale = this._getTimeScale();
+        }
 
+        // Size Markers
+        this._assignRowsToMarkers();
 
-    console.log("rightConstraint:", rightConstraint);
-    console.log("=======================");
+        // Size swipable area
+        this._el.slider_background.style.width = this.timescale.getPixelWidth() + this.options.width + "px";
+        this._el.slider_background.style.left = -(this.options.width / 2) + "px";
+        this._el.slider.style.width = this.timescale.getPixelWidth() + this.options.width + "px";
 
-        
-    // Allow some extra space to ensure last marker is reachable
-    var extraSpace = 100; // pixels of extra scroll space
-    var rightConstraint = Math.min(0, -(timelineWidth - visibleWidth + extraSpace));
-    
-    this._swipable.updateConstraint({ 
-        top: false, 
-        bottom: false, 
-        left: 0, 
-        right: rightConstraint
-    });
+        // Update Swipable constraint
+        this._swipable.updateConstraint({ top: false, bottom: false, left: (this.options.width / 2), right: -(this.timescale.getPixelWidth() - (this.options.width / 2)) });
 
-    if (reposition_markers) {
-        this._drawTimeline()
+        if (reposition_markers) {
+            this._drawTimeline()
+        }
+        // Go to the current slide
+        this.goToId(this.current_id, true);
     }
-    // Go to the current slide
-    this.goToId(this.current_id, true);
-}
 
 
     /*	TimeScale
@@ -14010,6 +13992,35 @@ class TimeNav {
         });
     }
 
+    _calculateMaxLevelsPerGroup() {
+        var group_levels = {};
+        var group_labels = this.timescale.getGroupLabels();
+        
+        // Initialize groups
+        for (var i = 0; i < group_labels.length; i++) {
+            group_levels[group_labels[i].label] = 0;
+        }
+        
+        // Find maximum level in each group
+        for (var i = 0; i < this._markers.length; i++) {
+            var marker = this._markers[i];
+            var group = marker.data.group || '';
+            var level = marker.data.level || 0;
+            
+            if (group_levels[group] !== undefined && level > group_levels[group]) {
+                group_levels[group] = level;
+            }
+        }
+        
+        // Convert to array in same order as group_labels
+        var result = [];
+        for (var i = 0; i < group_labels.length; i++) {
+            result.push(group_levels[group_labels[i].label] + 1); // +1 because levels are 0-based
+        }
+        
+        return result;
+    }
+    
     _updateTimeScale(new_scale) {
         this.options.scale_factor = new_scale;
         this._updateDrawTimeline();
@@ -14030,36 +14041,31 @@ class TimeNav {
         if (typeof(zoom_factor) == 'number') {
             this.setZoomFactor(zoom_factor);
         } else {
-            console.warn("Invalid zoom level 1. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
+            console.warn("Invalid zoom level. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
         }
     }
 
     setZoomFactor(factor) {
-    if (factor <= this.options.zoom_sequence[0]) {
-        this.fire("zoomtoggle", { zoom: "out", show: false });
-    } else {
-        this.fire("zoomtoggle", { zoom: "out", show: true });
-    }
+        if (factor <= this.options.zoom_sequence[0]) {
+            this.fire("zoomtoggle", { zoom: "out", show: false });
+        } else {
+            this.fire("zoomtoggle", { zoom: "out", show: true });
+        }
 
-    if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
-        this.fire("zoomtoggle", { zoom: "in", show: false });
-    } else {
-        this.fire("zoomtoggle", { zoom: "in", show: true });
-    }
+        if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
+            this.fire("zoomtoggle", { zoom: "in", show: false });
+        } else {
+            this.fire("zoomtoggle", { zoom: "in", show: true });
+        }
 
-    if (factor == 0) {
-        console.warn("Zoom factor must be greater than zero. Using 0.1");
-        factor = 0.1;
+        if (factor == 0) {
+            console.warn("Zoom factor must be greater than zero. Using 0.1");
+            factor = 0.1;
+        }
+        this.options.scale_factor = factor;
+        //this._updateDrawTimeline(true);
+        this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
     }
-    this.options.scale_factor = factor;
-    
-    // FORCE COMPLETE REDRAW ON ZOOM
-    this.timescale = this._getTimeScale();
-    this._drawTimeline(true);
-    this.updateDisplay();
-    
-    this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
-}
 
     /*	Groups
     ================================================== */
@@ -14088,51 +14094,30 @@ class TimeNav {
     }
 
     _positionGroups() {
-    if (this.options.has_groups) {
-        var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
-            group_labels = this.timescale.getGroupLabels();
+        if (this.options.has_groups) {
+            var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
+                group_labels = this.timescale.getGroupLabels();
 
-        // Calculate total rows needed by all groups
-        var total_group_rows = 0;
-        for (var i = 0; i < group_labels.length; i++) {
-            total_group_rows += group_labels[i].rows;
-        }
-        
-        // Calculate individual group height based on its row count
-        var group_height_per_row = Math.floor(available_height / total_group_rows) - this.options.marker_padding;
-
-        // GET THE ACTUAL TIMELINE WIDTH
-        var timelineWidth = this.timescale.getPixelWidth();
-
-        var current_row_offset = 0;
-        
-        for (var i = 0; i < this._groups.length; i++) {
-            var group_rows = group_labels[i].rows;
-            var group_height = group_height_per_row * group_rows;
-            var group_y = Math.floor(current_row_offset * (group_height_per_row + this.options.marker_padding));
+            // Calculate max levels per group
+            var max_levels_per_group = this._calculateMaxLevelsPerGroup();
             
-            var group_hide = false;
-            if (group_y > (available_height - this.options.marker_padding)) {
-                group_hide = true;
+            for (var i = 0, group_rows = 0; i < this._groups.length; i++) {
+                var group_height = Math.floor((available_height / this.timescale.getNumberOfRows()) - this.options.marker_padding);
+                var group_y = Math.floor(group_rows * (group_height + this.options.marker_padding));
+                var group_hide = false;
+                
+                if (group_y > (available_height - this.options.marker_padding)) {
+                    group_hide = true;
+                }
+
+                // Pass max levels to group for proper height calculation
+                this._groups[i].setRowPosition(group_y, this._calculated_row_height + this.options.marker_padding / 2, max_levels_per_group[i] || 1);
+                this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
+
+                group_rows += this._groups[i].data.rows; // account for groups spanning multiple rows
             }
-
-            // Position the group
-            this._groups[i].setRowPosition(group_y, group_height);
-            this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
-
-            // SET GROUPS TO ACTUAL TIMELINE WIDTH (not 100%)
-            var group_element = this._groups[i]._el.container;
-            group_element.style.width = timelineWidth + "px";
-            group_element.style.left = "0px";
-            // ADD THESE LINES RIGHT HERE:
-            // MAKE ABSOLUTELY SURE GROUPS DON'T INTERFERE
-            group_element.style.pointerEvents = "none";
-            group_element.style.zIndex = "1"; // Put them behind interactive elements
-
-            current_row_offset += group_rows;
         }
     }
-}
 
     /*	Markers
     ================================================== */
@@ -14190,28 +14175,35 @@ class TimeNav {
     }
 
     _assignRowsToMarkers() {
-    var available_height = this._calculateAvailableHeight(),
-        marker_height = this._calculateMarkerHeight(available_height);
+        var available_height = this._calculateAvailableHeight(),
+            marker_height = this._calculateMarkerHeight(available_height);
 
-    this._positionGroups();
 
-    this._calculated_row_height = this._calculateRowHeight(available_height);
+        this._positionGroups();
 
-    for (var i = 0; i < this._markers.length; i++) {
-        // Set Height
-        this._markers[i].setHeight(marker_height);
+        this._calculated_row_height = this._calculateRowHeight(available_height);
 
-        // Position by Row only - level is handled by TimeScale
-        var pos_info = this.timescale.getPositionInfo(i);
-        var row = pos_info.row;
+        for (var i = 0; i < this._markers.length; i++) {
+            // Set Height
+            this._markers[i].setHeight(marker_height);
 
-        var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + this.options.marker_padding;
-        var remainder_height = available_height - marker_y + this.options.marker_padding;
-        
-        // DON'T pass level to marker - let TimeScale handle the positioning
-        this._markers[i].setRowPosition(marker_y, remainder_height);
-    };
-}
+            // Get position info
+            var pos_info = this.timescale.getPositionInfo(i);
+            var row = pos_info.row;
+            var level = this._markers[i].data.level || 0;
+
+            // Calculate vertical position: group row + level offset
+            var level_offset = level * (marker_height / 3); // Adjust this divisor for spacing
+            var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + 
+                        this.options.marker_padding + level_offset;
+
+            var remainder_height = available_height - marker_y + this.options.marker_padding;
+            this._markers[i].setRowPosition(marker_y, remainder_height);
+            
+            // Add level data attribute for CSS targeting
+            this._markers[i]._el.container.setAttribute('data-level', level);
+        }
+    }
 
     _resetMarkersActive() {
         for (var i = 0; i < this._markers.length; i++) {
@@ -14401,10 +14393,6 @@ class TimeNav {
         this._dispatchVisibleTicksChange();
     }
 
-    goToId(id, fast, css_animation) {
-        this.goTo(this._findMarkerIndex(id), fast, css_animation);
-    }
-
     _dispatchVisibleTicksChange() {
         /**
          * The timeout is required to wait till the end of the animation
@@ -14554,7 +14542,7 @@ class TimeNav {
             this._positionEras(fast);
         }
     }
-
+    
     _updateDrawTimeline(check_update) {
         var do_update = false;
 
@@ -14831,14 +14819,14 @@ class TimeScale {
     }
 
     /*  Compute the marker row positions, minimizing the number of overlaps */
-    _computeRowInfo(positions, rows_left, group_index = null) {
+    /*  Compute the marker row positions, minimizing the number of overlaps */
+_computeRowInfo(positions, rows_left, group_index = null) {
     var lasts_in_row = [];
     var n_overlaps = 0;
     
     // STEP 1: First pass - find the maximum manual level requested WITHIN THIS GROUP
     var max_manual_level = -1;
     for (var i = 0; i < positions.length; i++) {
-        var pos_info = positions[i];
         var slide_index = this._findSlideIndexByStartDate(pos_info.start_date_millis);
         
         if (slide_index >= 0 && this._slides[slide_index] && 
@@ -14879,24 +14867,11 @@ class TimeScale {
                     lasts_in_row.push(null);
                 }
                 
-                // Check if we can place this event in the requested level without overlapping
-                var can_use_manual_level = true;
-                if (lasts_in_row[manual_level] !== null) {
-                    // Check if this event overlaps with the last event in this level
-                    var last_event = lasts_in_row[manual_level];
-                    if (pos_info.start < last_event.end) {
-                        // They overlap - cannot use manual level
-                        can_use_manual_level = false;
-                    }
-                }
-                
-                if (can_use_manual_level) {
-                    pos_info.row = manual_level;
-                    pos_info.level = manual_level;
-                    lasts_in_row[manual_level] = pos_info;
-                    continue; // Skip automatic layout
-                }
-                // If manual level is occupied, fall through to automatic layout
+                // FORCE the event to the manual level WITHIN THIS GROUP
+                pos_info.row = manual_level;
+                pos_info.level = manual_level; // Store level for rendering
+                lasts_in_row[manual_level] = pos_info;
+                continue; // Skip automatic layout
             }
         }
 
@@ -14940,257 +14915,148 @@ class TimeScale {
     return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
 }
 
-    // ADD THE NEW METHOD RIGHT HERE:
-_computeRowInfoForGroup(positions, group_slides, rows_left, group_index = null) {
-    
-    var lasts_in_row = [];
-    var n_overlaps = 0;
-    
-    // STEP 1: Find manual levels within this group's slides
-    var max_manual_level = -1;
-    for (var i = 0; i < positions.length; i++) {
-        var current_slide = group_slides[i];
-        if (current_slide && current_slide.level !== undefined && current_slide.level !== null) {
-            var manual_level = parseInt(current_slide.level);
-            if (!isNaN(manual_level) && manual_level > max_manual_level) {
-                max_manual_level = manual_level;
-            }
-        }
-    }
-    
-    // STEP 2: Pre-create levels for manual assignments
-    var total_levels_needed = Math.max(max_manual_level + 1, 0);
-    for (var l = 0; l < total_levels_needed; l++) {
-        lasts_in_row.push(null);
-    }
-
-    // STEP 3: Process each event in this group
-    for (var i = 0; i < positions.length; i++) {
-        var pos_info = positions[i];
-        var current_slide = group_slides[i]; // Use group-specific slide
-
-        // Handle manual level assignment
-        if (current_slide && current_slide.level !== undefined && current_slide.level !== null) {
-            var manual_level = parseInt(current_slide.level);
-            
-            if (!isNaN(manual_level) && manual_level >= 0) {
-                // Ensure the manual level exists (create if needed)
-                while (lasts_in_row.length <= manual_level) {
-                    lasts_in_row.push(null);
-                }
-                
-                // Check if we can place this event in the requested level without overlapping
-                var can_use_manual_level = true;
-                if (lasts_in_row[manual_level] !== null) {
-                    // Check if this event overlaps with the last event in this level
-                    var last_event = lasts_in_row[manual_level];
-                    if (pos_info.start < last_event.end) {
-                        // They overlap - cannot use manual level
-                        can_use_manual_level = false;
-                    }
-                }
-                
-                if (can_use_manual_level) {
-                    pos_info.row = manual_level;
-                    pos_info.level = manual_level;
-                    lasts_in_row[manual_level] = pos_info;
-                    continue; // Skip automatic layout
-                }
-                // If manual level is occupied, fall through to automatic layout
-            }
-        }
-
-        // Automatic layout for events without manual levels or with occupied manual levels
-        delete pos_info.row;
-        var overlaps = [];
-
-        for (var j = 0; j < lasts_in_row.length; j++) {
-            overlaps.push(lasts_in_row[j] ? lasts_in_row[j].end - pos_info.start : -1);
-            if(overlaps[j] <= 0) {
-                pos_info.row = j;
-                pos_info.level = j; // Store level for rendering
-                lasts_in_row[j] = pos_info;
-                break;
-            }
-        }
-
-        if (typeof(pos_info.row) == 'undefined') {
-            if (rows_left === null) {
-                pos_info.row = lasts_in_row.length;
-                pos_info.level = lasts_in_row.length;
-                lasts_in_row.push(pos_info);
-            } else if (rows_left > 0) {
-                pos_info.row = lasts_in_row.length;
-                pos_info.level = lasts_in_row.length;
-                lasts_in_row.push(pos_info);
-                rows_left--;
-            } else {
-                var min_overlap = Math.min.apply(null, overlaps);
-                var idx = overlaps.indexOf(min_overlap);
-                pos_info.row = idx;
-                pos_info.level = idx;
-                if (pos_info.end > lasts_in_row[idx].end) {
-                    lasts_in_row[idx] = pos_info;
-                }
-                n_overlaps++;
-            }
-        }
-    }
-
-    return {n_rows: lasts_in_row.length, n_overlaps: n_overlaps};
-}
-
     /*  Compute marker positions */
-    /*  Compute marker positions */
-_computePositionInfo(slides, max_rows, default_marker_width) {
-    default_marker_width = default_marker_width || 100;
+    _computePositionInfo(slides, max_rows, default_marker_width) {
+        default_marker_width = default_marker_width || 100;
 
-    // Make sure _positions is initialized (THIS WAS MISSING)
-    if (!this._positions) {
-        this._positions = [];
-    }
-    
-    var groups = [];
-    var empty_group = false;
+        // Make sure _positions is initialized (THIS WAS MISSING)
+        if (!this._positions) {
+            this._positions = [];
+        }
+        
+        var groups = [];
+        var empty_group = false;
 
-    // Set start/end/width; enumerate groups
-    for (var i = 0; i < slides.length; i++) {
+        // Set start/end/width; enumerate groups
+        for (var i = 0; i < slides.length; i++) {
         var pos_info = {
-            start: this.getPosition(slides[i].start_date.getTime()),
-            start_date_millis: slides[i].start_date.getTime(), // STORE FOR LEVEL LOOKUP
-            slide_index: i // ADD THIS FOR EASIER SLIDE LOOKUP
+        start: this.getPosition(slides[i].start_date.getTime()),
+        start_date_millis: slides[i].start_date.getTime() // STORE FOR LEVEL LOOKUP
         };
         this._positions.push(pos_info);
 
-        if (typeof(slides[i].end_date) != 'undefined') {
-            var end_pos = this.getPosition(slides[i].end_date.getTime());
-            pos_info.width = end_pos - pos_info.start;
-            if (pos_info.width > default_marker_width) {
-                pos_info.end = pos_info.start + pos_info.width;
+            if (typeof(slides[i].end_date) != 'undefined') {
+                var end_pos = this.getPosition(slides[i].end_date.getTime());
+                pos_info.width = end_pos - pos_info.start;
+                if (pos_info.width > default_marker_width) {
+                    pos_info.end = pos_info.start + pos_info.width;
+                } else {
+                    pos_info.end = pos_info.start + default_marker_width;
+                }
             } else {
+                pos_info.width = default_marker_width;
                 pos_info.end = pos_info.start + default_marker_width;
             }
-        } else {
-            pos_info.width = default_marker_width;
-            pos_info.end = pos_info.start + default_marker_width;
-        }
 
-        if (slides[i].group) {
-            if (groups.indexOf(slides[i].group) < 0) {
-                groups.push(slides[i].group);
-            }
-        } else {
-            empty_group = true;
-        }
-    }
-
-    if (!(groups.length)) {
-        var result = this._computeRowInfo(this._positions, max_rows);
-        this._number_of_rows = result.n_rows;
-    } else {
-        if (empty_group) {
-            groups.push("");
-        }
-
-        // Init group info
-        var group_info = [];
-
-        for (var i = 0; i < groups.length; i++) {
-            group_info[i] = {
-                label: groups[i],
-                idx: i,
-                positions: [],
-                slides: [], // ADD THIS LINE FOR SLIDES STORAGE
-                n_rows: 1, // default
-                n_overlaps: 0
-            };
-        }
-
-        for (var i = 0; i < this._positions.length; i++) {
-            var pos_info = this._positions[i];
-            var slide_index = pos_info.slide_index;
-            var group_index = groups.indexOf(slides[slide_index].group || "");
-
-            pos_info.group = group_index;
-            pos_info.row = 0;
-
-            var gi = group_info[group_index];
-            gi.positions.push(pos_info);
-            gi.slides.push(slides[slide_index]); // ADD THIS LINE - STORE SLIDE
-
-            for (var j = gi.positions.length - 1; j >= 0; j--) {
-                if (gi.positions[j].end > pos_info.start) {
-                    gi.n_overlaps++;
+            if (slides[i].group) {
+                if (groups.indexOf(slides[i].group) < 0) {
+                    groups.push(slides[i].group);
                 }
+            } else {
+                empty_group = true;
             }
         }
 
-        var n_rows = groups.length; // start with 1 row per group
-
-        while (true) {
-            // Count free rows available
-            var rows_left = Math.max(0, max_rows - n_rows);
-            if (!rows_left) {
-                break; // no free rows, nothing to do
+        if (!(groups.length)) {
+            var result = this._computeRowInfo(this._positions, max_rows);
+            this._number_of_rows = result.n_rows;
+        } else {
+            if (empty_group) {
+                groups.push("");
             }
 
-            // Sort by # overlaps, idx
-            group_info.sort(function(a, b) {
-                if (a.n_overlaps > b.n_overlaps) {
-                    return -1;
-                } else if (a.n_overlaps < b.n_overlaps) {
-                    return 1;
+            // Init group info
+            var group_info = [];
+
+            for (var i = 0; i < groups.length; i++) {
+                group_info[i] = {
+                    label: groups[i],
+                    idx: i,
+                    positions: [],
+                    n_rows: 1, // default
+                    n_overlaps: 0
+                };
+            }
+
+            for (var i = 0; i < this._positions.length; i++) {
+                var pos_info = this._positions[i];
+
+                pos_info.group = groups.indexOf(slides[i].group || "");
+                pos_info.row = 0;
+
+                var gi = group_info[pos_info.group];
+                for (var j = gi.positions.length - 1; j >= 0; j--) {
+                    if (gi.positions[j].end > pos_info.start) {
+                        gi.n_overlaps++;
+                    }
                 }
-                return a.idx - b.idx;
-            });
-            if (!group_info[0].n_overlaps) {
-                break; // no overlaps, nothing to do
+
+                gi.positions.push(pos_info);
             }
 
-            // Distribute free rows among groups with overlaps
-            var n_rows = 0;
-            for (var i = 0; i < group_info.length; i++) {
-                var gi = group_info[i];
+            var n_rows = groups.length; // start with 1 row per group
 
-                if (gi.n_overlaps && rows_left) {
-                    var res = this._computeRowInfoForGroup(gi.positions, gi.slides, gi.n_rows + 1, gi.idx);
-                    // ADD THESE DEBUG LINES:
-                    
+            while (true) {
+                // Count free rows available
+                var rows_left = Math.max(0, max_rows - n_rows);
+                if (!rows_left) {
+                    break; // no free rows, nothing to do
+                }
+
+                // Sort by # overlaps, idx
+                group_info.sort(function(a, b) {
+                    if (a.n_overlaps > b.n_overlaps) {
+                        return -1;
+                    } else if (a.n_overlaps < b.n_overlaps) {
+                        return 1;
+                    }
+                    return a.idx - b.idx;
+                });
+                if (!group_info[0].n_overlaps) {
+                    break; // no overlaps, nothing to do
+                }
+
+                // Distribute free rows among groups with overlaps
+                var n_rows = 0;
+                for (var i = 0; i < group_info.length; i++) {
+                    var gi = group_info[i];
+
+                    if (gi.n_overlaps && rows_left) {
+                    var res = this._computeRowInfo(gi.positions, gi.n_rows + 1, gi.idx);
                     gi.n_rows = res.n_rows; // update group info
                     gi.n_overlaps = res.n_overlaps;
                     rows_left--; // update rows left
+                    }
+
+                    n_rows += gi.n_rows; // update rows used
+                }
+            }
+
+            // Set number of rows
+            this._number_of_rows = n_rows;
+
+            // Set group labels; offset row positions
+            this._group_labels = [];
+
+            group_info.sort(function(a, b) { return a.idx - b.idx; });
+
+            for (var i = 0, row_offset = 0; i < group_info.length; i++) {
+                this._group_labels.push({
+                    label: group_info[i].label,
+                    rows: group_info[i].n_rows
+                });
+
+                for (var j = 0; j < group_info[i].positions.length; j++) {
+                    var pos_info = group_info[i].positions[j];
+                    pos_info.row += row_offset;
                 }
 
-                n_rows += gi.n_rows; // update rows used
+                row_offset += group_info[i].n_rows;
             }
-        }
-
-        // Set number of rows
-        this._number_of_rows = n_rows;
-
-        // Set group labels; offset row positions
-        this._group_labels = [];
-
-        group_info.sort(function(a, b) { return a.idx - b.idx; });
-
-        for (var i = 0, row_offset = 0; i < group_info.length; i++) {
-            this._group_labels.push({
-                label: group_info[i].label,
-                rows: group_info[i].n_rows
-            });
-
-            for (var j = 0; j < group_info[i].positions.length; j++) {
-                var pos_info = group_info[i].positions[j];
-                // FIX: PRESERVE RELATIVE LEVEL POSITIONING WITHIN GROUPS
-                pos_info.row = row_offset + (pos_info.level || 0);
-            }
-
-            row_offset += group_info[i].n_rows;
         }
     }
-}
 
-    getAxisTickDateFormat(name) {
+        getAxisTickDateFormat(name) {
         if (this._scale == 'cosmological') {
             return 'compact'
         }
