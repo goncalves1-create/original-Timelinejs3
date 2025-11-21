@@ -58,7 +58,7 @@ export class TimeGroup {
 
         console.log("TimeGroup.setRowPosition - top:", n, "height:", h);
     console.log("Current 123 group width:", this._el.container.style.width);
-    console.log("Current group position:", this._el.container.style.top, this._el.container.style.left);
+    console.log("Current 123 group position:", this._el.container.style.top, this._el.container.style.left);
         
     this.options.height = total_height;
     this.setPosition({top:n});
