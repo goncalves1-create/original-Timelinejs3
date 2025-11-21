@@ -251,7 +251,7 @@ export class TimeNav {
         if (typeof(zoom_factor) == 'number') {
             this.setZoomFactor(zoom_factor);
         } else {
-            console.warn("Error. Invalid zoom level. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
+            console.warn("Invalid zoom level. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
         }
     }
 
