@@ -51,18 +51,11 @@ export class TimeGroup {
 		
 	}
 	
-	setRowPosition(n, h, max_levels = 1) {
-    // Calculate height based on levels instead of just rows
-    var level_height = h; // Height per level
-    var total_height = level_height * max_levels;
-
-        console.log("TimeGroup.setRowPosition - top:", n, "height:", h);
-    console.log("Current 3 group width:", this._el.container.style.width);
-    console.log("Current 3 group position:", this._el.container.style.top, this._el.container.style.left);
-        
-    this.options.height = total_height;
+	setRowPosition(n, h) {
+    this.options.height = h * this.data.rows;
     this.setPosition({top:n});
     this._el.container.style.height = this.options.height + "px";
+    // REMOVE all the width manipulation - let it use default CSS
 }
 	
 	setAlternateRowColor(alternate, hide) {
@@ -87,14 +80,16 @@ export class TimeGroup {
 	
 	/*	Private Methods
 	================================================== */
-	_initLayout () {
-		
-		// Create Layout
-		this._el.message = DOM.create("div", "tl-timegroup-message", this._el.container);
-		this._el.message.innerHTML = this.data.label;
-		
-		
-	}
+	_initLayout() {
+    // Create Layout
+    this._el.container = DOM.create("div", "tl-timegroup");
+    
+    // MAKE GROUP NON-INTERACTIVE
+    this._el.container.style.pointerEvents = "none";
+    
+    this._el.message = DOM.create("div", "tl-timegroup-message", this._el.container);
+    this._el.message.innerHTML = this.data.label;
+    }
 	
 	_initEvents () {
 		DOMEvent.addListener(this._el.container, 'click', this._onMouseClick, this);
