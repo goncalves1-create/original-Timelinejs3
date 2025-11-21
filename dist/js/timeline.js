@@ -13316,12 +13316,10 @@ class TimeGroup {
 	}
 	
 	setRowPosition(n, h) {
-    console.log("TimeGroup setRowPosition called, current width:", this._el.container.style.width);
     this.options.height = h * this.data.rows;
     this.setPosition({top:n});
     this._el.container.style.height = this.options.height + "px";
-    this._el.container.style.left = "0px";
-    // REMOVE the width calculation - let TimeNav.js set the width
+    // REMOVE all the width manipulation - let it use default CSS
 }
 	
 	setAlternateRowColor(alternate, hide) {
@@ -13940,38 +13938,15 @@ class TimeNav {
     this._assignRowsToMarkers();
 
     // Size swipable area
-    this._el.slider_background.style.width = this.timescale.getPixelWidth() + "px";
-    this._el.slider_background.style.left = "0px";
-    this._el.slider.style.width = this.timescale.getPixelWidth() + "px";
-    this._el.marker_container.style.width = this.timescale.getPixelWidth() + "px";
-
-    // DEBUG: Check what's happening with widths
-    console.log("=== DEBUG updateDisplay ===");
-    console.log("timelineWidth:", this.timescale.getPixelWidth());
-    console.log("visibleWidth:", this.options.width);
-    console.log("slider width:", this._el.slider.style.width);
-    console.log("slider background width:", this._el.slider_background.style.width);
-    console.log("marker container width:", this._el.marker_container.style.width);
-        
-    // Update Swipable constraint with PROPER calculation
-    var timelineWidth = this.timescale.getPixelWidth();
-    var visibleWidth = this.options.width;
-
+    this._el.slider_background.style.width = this.timescale.getPixelWidth() + this.options.width + "px";
+    this._el.slider_background.style.left = -(this.options.width / 2) + "px";
+    this._el.slider.style.width = this.timescale.getPixelWidth() + this.options.width + "px";
 
     console.log("rightConstraint:", rightConstraint);
     console.log("=======================");
-
         
-    // Allow some extra space to ensure last marker is reachable
-    var extraSpace = 100; // pixels of extra scroll space
-    var rightConstraint = Math.min(0, -(timelineWidth - visibleWidth + extraSpace));
-    
-    this._swipable.updateConstraint({ 
-        top: false, 
-        bottom: false, 
-        left: 0, 
-        right: rightConstraint
-    });
+    // Update Swipable constraint
+    this._swipable.updateConstraint({ top: false, bottom: false, left: (this.options.width / 2), right: -(this.timescale.getPixelWidth() - (this.options.width / 2)) });
 
     if (reposition_markers) {
         this._drawTimeline()
@@ -14090,46 +14065,21 @@ class TimeNav {
     _positionGroups() {
     if (this.options.has_groups) {
         var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
+            group_height = Math.floor((available_height / this.timescale.getNumberOfRows()) - this.options.marker_padding),
             group_labels = this.timescale.getGroupLabels();
 
-        // Calculate total rows needed by all groups
-        var total_group_rows = 0;
-        for (var i = 0; i < group_labels.length; i++) {
-            total_group_rows += group_labels[i].rows;
-        }
-        
-        // Calculate individual group height based on its row count
-        var group_height_per_row = Math.floor(available_height / total_group_rows) - this.options.marker_padding;
-
-        // GET THE ACTUAL TIMELINE WIDTH
-        var timelineWidth = this.timescale.getPixelWidth();
-
-        var current_row_offset = 0;
-        
-        for (var i = 0; i < this._groups.length; i++) {
-            var group_rows = group_labels[i].rows;
-            var group_height = group_height_per_row * group_rows;
-            var group_y = Math.floor(current_row_offset * (group_height_per_row + this.options.marker_padding));
-            
+        for (var i = 0, group_rows = 0; i < this._groups.length; i++) {
+            var group_y = Math.floor(group_rows * (group_height + this.options.marker_padding));
             var group_hide = false;
             if (group_y > (available_height - this.options.marker_padding)) {
                 group_hide = true;
             }
 
-            // Position the group
-            this._groups[i].setRowPosition(group_y, group_height);
+            // REVERT TO ORIGINAL GROUP POSITIONING
+            this._groups[i].setRowPosition(group_y, this._calculated_row_height + this.options.marker_padding / 2);
             this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
 
-            // SET GROUPS TO ACTUAL TIMELINE WIDTH (not 100%)
-            var group_element = this._groups[i]._el.container;
-            group_element.style.width = timelineWidth + "px";
-            group_element.style.left = "0px";
-            // ADD THESE LINES RIGHT HERE:
-            // MAKE ABSOLUTELY SURE GROUPS DON'T INTERFERE
-            group_element.style.pointerEvents = "none";
-            group_element.style.zIndex = "1"; // Put them behind interactive elements
-
-            current_row_offset += group_rows;
+            group_rows += this._groups[i].data.rows;
         }
     }
 }
