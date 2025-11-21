@@ -13321,8 +13321,8 @@ class TimeGroup {
     var total_height = level_height * max_levels;
 
         console.log("TimeGroup.setRowPosition - top:", n, "height:", h);
-    console.log("Current 123 group width:", this._el.container.style.width);
-    console.log("Current 123 group position:", this._el.container.style.top, this._el.container.style.left);
+    console.log("Current 3 group width:", this._el.container.style.width);
+    console.log("Current 3 group position:", this._el.container.style.top, this._el.container.style.left);
         
     this.options.height = total_height;
     this.setPosition({top:n});
