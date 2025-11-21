@@ -13924,40 +13924,61 @@ class TimeNav {
     /*	Update Display
     ================================================== */
     updateDisplay(width, height, animate) {
-        console.log("=== updateDisplay DEBUG 123 ===");
-    console.log("options.width:", this.options.width);
-    console.log("options.height:", this.options.height);
-    console.log("timelineWidth:", this.timescale.getPixelWidth());
-        
-        let reposition_markers = false;
-        if (width) {
-            if (this.options.width == 0 && width > 0) {
-                reposition_markers = true;
-            }
-            this.options.width = width;
+    let reposition_markers = false;
+    if (width) {
+        if (this.options.width == 0 && width > 0) {
+            reposition_markers = true;
         }
-        if (height && height != this.options.height) {
-            this.options.height = height;
-            this.timescale = this._getTimeScale();
-        }
-
-        // Size Markers
-        this._assignRowsToMarkers();
-
-        // Size swipable area
-        this._el.slider_background.style.width = this.timescale.getPixelWidth() + this.options.width + "px";
-        this._el.slider_background.style.left = -(this.options.width / 2) + "px";
-        this._el.slider.style.width = this.timescale.getPixelWidth() + this.options.width + "px";
-
-        // Update Swipable constraint
-        this._swipable.updateConstraint({ top: false, bottom: false, left: (this.options.width / 2), right: -(this.timescale.getPixelWidth() - (this.options.width / 2)) });
-
-        if (reposition_markers) {
-            this._drawTimeline()
-        }
-        // Go to the current slide
-        this.goToId(this.current_id, true);
+        this.options.width = width;
     }
+    if (height && height != this.options.height) {
+        this.options.height = height;
+        this.timescale = this._getTimeScale();
+    }
+
+    // Size Markers
+    this._assignRowsToMarkers();
+
+    // Size swipable area
+    this._el.slider_background.style.width = this.timescale.getPixelWidth() + "px";
+    this._el.slider_background.style.left = "0px";
+    this._el.slider.style.width = this.timescale.getPixelWidth() + "px";
+    this._el.marker_container.style.width = this.timescale.getPixelWidth() + "px";
+
+    // DEBUG: Check what's happening with widths
+    console.log("=== DEBUG updateDisplay ===");
+    console.log("timelineWidth:", this.timescale.getPixelWidth());
+    console.log("visibleWidth:", this.options.width);
+    console.log("slider width:", this._el.slider.style.width);
+    console.log("slider background width:", this._el.slider_background.style.width);
+    console.log("marker container width:", this._el.marker_container.style.width);
+        
+    // Update Swipable constraint with PROPER calculation
+    var timelineWidth = this.timescale.getPixelWidth();
+    var visibleWidth = this.options.width;
+
+
+    console.log("rightConstraint:", rightConstraint);
+    console.log("=======================");
+
+        
+    // Allow some extra space to ensure last marker is reachable
+    var extraSpace = 100; // pixels of extra scroll space
+    var rightConstraint = Math.min(0, -(timelineWidth - visibleWidth + extraSpace));
+    
+    this._swipable.updateConstraint({ 
+        top: false, 
+        bottom: false, 
+        left: 0, 
+        right: rightConstraint
+    });
+
+    if (reposition_markers) {
+        this._drawTimeline()
+    }
+    // Go to the current slide
+    this.goToId(this.current_id, true);
+}
 
 
     /*	TimeScale
@@ -13989,35 +14010,6 @@ class TimeNav {
         });
     }
 
-    _calculateMaxLevelsPerGroup() {
-        var group_levels = {};
-        var group_labels = this.timescale.getGroupLabels();
-        
-        // Initialize groups
-        for (var i = 0; i < group_labels.length; i++) {
-            group_levels[group_labels[i].label] = 0;
-        }
-        
-        // Find maximum level in each group
-        for (var i = 0; i < this._markers.length; i++) {
-            var marker = this._markers[i];
-            var group = marker.data.group || '';
-            var level = marker.data.level || 0;
-            
-            if (group_levels[group] !== undefined && level > group_levels[group]) {
-                group_levels[group] = level;
-            }
-        }
-        
-        // Convert to array in same order as group_labels
-        var result = [];
-        for (var i = 0; i < group_labels.length; i++) {
-            result.push(group_levels[group_labels[i].label] + 1); // +1 because levels are 0-based
-        }
-        
-        return result;
-    }
-    
     _updateTimeScale(new_scale) {
         this.options.scale_factor = new_scale;
         this._updateDrawTimeline();
@@ -14038,31 +14030,36 @@ class TimeNav {
         if (typeof(zoom_factor) == 'number') {
             this.setZoomFactor(zoom_factor);
         } else {
-            console.warn("Invalid zoom level. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
+            console.warn("Invalid zoom level 1. Please use an index number between 0 and " + (this.options.zoom_sequence.length - 1));
         }
     }
 
     setZoomFactor(factor) {
-        if (factor <= this.options.zoom_sequence[0]) {
-            this.fire("zoomtoggle", { zoom: "out", show: false });
-        } else {
-            this.fire("zoomtoggle", { zoom: "out", show: true });
-        }
-
-        if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
-            this.fire("zoomtoggle", { zoom: "in", show: false });
-        } else {
-            this.fire("zoomtoggle", { zoom: "in", show: true });
-        }
-
-        if (factor == 0) {
-            console.warn("Zoom factor must be greater than zero. Using 0.1");
-            factor = 0.1;
-        }
-        this.options.scale_factor = factor;
-        //this._updateDrawTimeline(true);
-        this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
+    if (factor <= this.options.zoom_sequence[0]) {
+        this.fire("zoomtoggle", { zoom: "out", show: false });
+    } else {
+        this.fire("zoomtoggle", { zoom: "out", show: true });
     }
+
+    if (factor >= this.options.zoom_sequence[this.options.zoom_sequence.length - 1]) {
+        this.fire("zoomtoggle", { zoom: "in", show: false });
+    } else {
+        this.fire("zoomtoggle", { zoom: "in", show: true });
+    }
+
+    if (factor == 0) {
+        console.warn("Zoom factor must be greater than zero. Using 0.1");
+        factor = 0.1;
+    }
+    this.options.scale_factor = factor;
+    
+    // FORCE COMPLETE REDRAW ON ZOOM
+    this.timescale = this._getTimeScale();
+    this._drawTimeline(true);
+    this.updateDisplay();
+    
+    this.goToId(this.current_id, !this._updateDrawTimeline(true), true);
+}
 
     /*	Groups
     ================================================== */
@@ -14091,30 +14088,51 @@ class TimeNav {
     }
 
     _positionGroups() {
-        if (this.options.has_groups) {
-            var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
-                group_labels = this.timescale.getGroupLabels();
+    if (this.options.has_groups) {
+        var available_height = (this.options.height - this._el.timeaxis_background.offsetHeight),
+            group_labels = this.timescale.getGroupLabels();
 
-            // Calculate max levels per group
-            var max_levels_per_group = this._calculateMaxLevelsPerGroup();
+        // Calculate total rows needed by all groups
+        var total_group_rows = 0;
+        for (var i = 0; i < group_labels.length; i++) {
+            total_group_rows += group_labels[i].rows;
+        }
+        
+        // Calculate individual group height based on its row count
+        var group_height_per_row = Math.floor(available_height / total_group_rows) - this.options.marker_padding;
+
+        // GET THE ACTUAL TIMELINE WIDTH
+        var timelineWidth = this.timescale.getPixelWidth();
+
+        var current_row_offset = 0;
+        
+        for (var i = 0; i < this._groups.length; i++) {
+            var group_rows = group_labels[i].rows;
+            var group_height = group_height_per_row * group_rows;
+            var group_y = Math.floor(current_row_offset * (group_height_per_row + this.options.marker_padding));
             
-            for (var i = 0, group_rows = 0; i < this._groups.length; i++) {
-                var group_height = Math.floor((available_height / this.timescale.getNumberOfRows()) - this.options.marker_padding);
-                var group_y = Math.floor(group_rows * (group_height + this.options.marker_padding));
-                var group_hide = false;
-                
-                if (group_y > (available_height - this.options.marker_padding)) {
-                    group_hide = true;
-                }
-
-                // Pass max levels to group for proper height calculation
-                this._groups[i].setRowPosition(group_y, this._calculated_row_height + this.options.marker_padding / 2, max_levels_per_group[i] || 1);
-                this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
-
-                group_rows += this._groups[i].data.rows; // account for groups spanning multiple rows
+            var group_hide = false;
+            if (group_y > (available_height - this.options.marker_padding)) {
+                group_hide = true;
             }
+
+            // Position the group
+            this._groups[i].setRowPosition(group_y, group_height);
+            this._groups[i].setAlternateRowColor((0,_core_Util__WEBPACK_IMPORTED_MODULE_0__.isEven)(i), group_hide);
+
+            // SET GROUPS TO ACTUAL TIMELINE WIDTH (not 100%)
+            var group_element = this._groups[i]._el.container;
+            group_element.style.width = timelineWidth + "px";
+            group_element.style.left = "0px";
+            // ADD THESE LINES RIGHT HERE:
+            // MAKE ABSOLUTELY SURE GROUPS DON'T INTERFERE
+            group_element.style.pointerEvents = "none";
+            group_element.style.zIndex = "1"; // Put them behind interactive elements
+
+            current_row_offset += group_rows;
         }
     }
+}
 
     /*	Markers
     ================================================== */
@@ -14172,35 +14190,28 @@ class TimeNav {
     }
 
     _assignRowsToMarkers() {
-        var available_height = this._calculateAvailableHeight(),
-            marker_height = this._calculateMarkerHeight(available_height);
+    var available_height = this._calculateAvailableHeight(),
+        marker_height = this._calculateMarkerHeight(available_height);
 
+    this._positionGroups();
 
-        this._positionGroups();
+    this._calculated_row_height = this._calculateRowHeight(available_height);
 
-        this._calculated_row_height = this._calculateRowHeight(available_height);
+    for (var i = 0; i < this._markers.length; i++) {
+        // Set Height
+        this._markers[i].setHeight(marker_height);
 
-        for (var i = 0; i < this._markers.length; i++) {
-            // Set Height
-            this._markers[i].setHeight(marker_height);
+        // Position by Row only - level is handled by TimeScale
+        var pos_info = this.timescale.getPositionInfo(i);
+        var row = pos_info.row;
 
-            // Get position info
-            var pos_info = this.timescale.getPositionInfo(i);
-            var row = pos_info.row;
-            var level = this._markers[i].data.level || 0;
-
-            // Calculate vertical position: group row + level offset
-            var level_offset = level * (marker_height / 3); // Adjust this divisor for spacing
-            var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + 
-                        this.options.marker_padding + level_offset;
-
-            var remainder_height = available_height - marker_y + this.options.marker_padding;
-            this._markers[i].setRowPosition(marker_y, remainder_height);
-            
-            // Add level data attribute for CSS targeting
-            this._markers[i]._el.container.setAttribute('data-level', level);
-        }
-    }
+        var marker_y = Math.floor(row * (marker_height + this.options.marker_padding)) + this.options.marker_padding;
+        var remainder_height = available_height - marker_y + this.options.marker_padding;
+        
+        // DON'T pass level to marker - let TimeScale handle the positioning
+        this._markers[i].setRowPosition(marker_y, remainder_height);
+    };
+}
 
     _resetMarkersActive() {
         for (var i = 0; i < this._markers.length; i++) {
@@ -14390,6 +14401,10 @@ class TimeNav {
         this._dispatchVisibleTicksChange();
     }
 
+    goToId(id, fast, css_animation) {
+        this.goTo(this._findMarkerIndex(id), fast, css_animation);
+    }
+
     _dispatchVisibleTicksChange() {
         /**
          * The timeout is required to wait till the end of the animation
@@ -14539,7 +14554,7 @@ class TimeNav {
             this._positionEras(fast);
         }
     }
-    
+
     _updateDrawTimeline(check_update) {
         var do_update = false;
 
