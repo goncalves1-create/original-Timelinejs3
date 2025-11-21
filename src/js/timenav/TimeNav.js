@@ -142,6 +142,11 @@ export class TimeNav {
     /*	Update Display
     ================================================== */
     updateDisplay(width, height, animate) {
+        console.log("=== updateDisplay DEBUG ===");
+    console.log("options.width:", this.options.width);
+    console.log("options.height:", this.options.height);
+    console.log("timelineWidth:", this.timescale.getPixelWidth());
+        
         let reposition_markers = false;
         if (width) {
             if (this.options.width == 0 && width > 0) {
